@@ -1,8 +1,10 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { backendUrl } from "@/lib/backend";
+import { importCourse, type ImportSummary } from "@/lib/courses";
 import { HOST_COOKIE, HOST_LOGIN_PATH } from "@/lib/host-cookie";
 import { readHostCookie } from "@/lib/host-session";
 
@@ -56,4 +58,21 @@ export async function logout(): Promise<void> {
   }
   cookieStore.delete(HOST_COOKIE);
   redirect(HOST_LOGIN_PATH);
+}
+
+export type ImportState = { summary?: ImportSummary; problems?: string[]; error?: string };
+
+export async function importCourseFile(_previous: ImportState, formData: FormData): Promise<ImportState> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose an import file to upload." };
+
+  try {
+    const result = await importCourse(await file.text());
+    if ("problems" in result) return { problems: result.problems };
+    refresh();
+    return { summary: result.summary };
+  } catch (error) {
+    unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
+    return { error: "The import failed. Try again." };
+  }
 }
