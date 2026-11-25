@@ -6,6 +6,8 @@ import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import { followSession, keepFollowing, submitAnswer, type AnswerResult, type LiveSession, type QuestionRevealed } from "@/lib/live";
 import { connectToQuizHub } from "@/lib/quiz-hub";
+import { followLeaderboard, leaderboardFor, type SessionLeaderboard } from "@/lib/leaderboard";
+import { MyScore } from "./my-score";
 
 /** This phone's tap on a Question: being sent, locked in by the server, or refused (with the reason). */
 type MyAnswer = { questionId: number; position: number; status: "sending" | "locked" | "refused"; result?: AnswerResult };
@@ -24,16 +26,20 @@ export function LivePlayer({ masterclassId }: { masterclassId: number }) {
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const [answer, setAnswer] = useState<MyAnswer | null>(null);
   const [connected, setConnected] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<SessionLeaderboard | null>(null);
+  const [participantId, setParticipantId] = useState<number | null>(null);
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
     const connection = connectToQuizHub();
     connectionRef.current = connection;
     followSession(connection, masterclassId, setSession);
+    followLeaderboard(connection, masterclassId, setLeaderboard);
     const stop = keepFollowing(
       connection,
       async () => {
-        await connection.invoke("WatchAsParticipant");
+        const me = await connection.invoke<{ id: number } | null>("WatchAsParticipant");
+        setParticipantId(me?.id ?? null);
       },
       setConnected,
     );
@@ -59,6 +65,12 @@ export function LivePlayer({ masterclassId }: { masterclassId: number }) {
   return (
     <>
       <Screen session={session} answer={answer} onChoose={choose} />
+      {session.step === "revealed" && (
+        <MyScore leaderboard={leaderboardFor(leaderboard, session.revealed.sessionId)} participantId={participantId} />
+      )}
+      {session.step === "ended" && (
+        <MyScore leaderboard={leaderboardFor(leaderboard, session.ended.sessionId)} participantId={participantId} sessionOver />
+      )}
       {!connected && <small style={{ display: "block" }}>Connecting to live updates…</small>}
     </>
   );
