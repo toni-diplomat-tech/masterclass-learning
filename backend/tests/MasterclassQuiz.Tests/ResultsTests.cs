@@ -46,6 +46,41 @@ public sealed class ResultsTests(SqlServerFixture sqlServer)
             sessionResults.Questions);
     }
 
+    [Fact]
+    public async Task Sessions_are_in_course_order_and_a_running_question_appears_once_revealed()
+    {
+        var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(2, 0, 0));
+        var participant = await meeting.JoinAsync();
+        var doubles = await meeting.StartSessionAsync("test-doubles");
+        await meeting.FinishSessionAsync(doubles, new() { [participant] = _ => 1 });
+        var unitTests = await meeting.StartSessionAsync("unit-tests");
+        await Engine.SubmitAnswerAsync(participant, unitTests.FirstQuestion.QuestionId, 1);
+
+        var beforeReveal = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
+        await meeting.AnswerAndRevealAsync(unitTests.Id, unitTests.Questions[0], []);
+        var afterReveal = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
+
+        Assert.Equal(
+            [("Unit tests", false, 0), ("Test doubles", true, doubles.Questions.Count)],
+            beforeReveal!.Sessions.Select(s => (s.WorkshopTitle, s.Ended, s.Questions.Count)));
+        var revealed = Assert.Single(afterReveal!.Sessions[0].Questions);
+        Assert.Equal((1, 1, 0, 0, 100), (revealed.Number, revealed.Correct, revealed.Incorrect, revealed.TimedOut, revealed.PercentCorrect));
+    }
+
+    [Fact]
+    public async Task A_masterclass_without_sessions_has_no_results_yet_and_an_unknown_one_has_none()
+    {
+        var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(1, 0, 0));
+
+        var results = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
+
+        Assert.Equal(
+            (meeting.MasterclassId, "Dev team 2026", MasterclassStatus.Open, "Testing Fundamentals"),
+            (results!.MasterclassId, results.MasterclassName, results.MasterclassStatus, results.CourseTitle));
+        Assert.Empty(results.Sessions);
+        Assert.Null(await Engine.GetMasterclassResultsAsync(-1));
+    }
+
     private async Task<Meeting> OpenMeetingAsync(JsonObject importFile)
     {
         var import = await Engine.ImportCourseAsync(importFile.ToJsonString());
