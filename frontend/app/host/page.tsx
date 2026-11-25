@@ -97,6 +97,12 @@ function Masterclasses({ masterclasses }: { masterclasses: MasterclassOverview[]
             <td>{masterclass.participants}</td>
             <td>
               <Link href={`/host/masterclass/${masterclass.id}/live`}>Projector view</Link>
+              {masterclass.status !== "Draft" && (
+                <>
+                  {" · "}
+                  <Link href={`/host/masterclass/${masterclass.id}/results`}>Results</Link>
+                </>
+              )}
             </td>
           </tr>
         ))}
