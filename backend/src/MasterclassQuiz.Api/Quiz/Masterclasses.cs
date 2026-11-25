@@ -29,3 +29,17 @@ public sealed record MasterclassCreateResult(MasterclassOverview? Masterclass, I
 {
     public bool Succeeded => Problems.Count == 0;
 }
+
+/// <summary>A person in a Masterclass, known by their assigned Nickname. <see cref="JoinedAt"/> is UTC.</summary>
+public sealed record Participant(
+    int Id,
+    int MasterclassId,
+    string MasterclassName,
+    MasterclassStatus MasterclassStatus,
+    string Nickname,
+    DateTime JoinedAt);
+
+/// <summary>
+/// A joined Participant and the secret token that identifies them from now on (kept in their browser's cookie).
+/// </summary>
+public sealed record ParticipantJoin(Participant Participant, string Token);
