@@ -34,6 +34,7 @@ builder.Services.AddSingleton<QuizEngine>();
 builder.Services.AddHostSession();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ParticipantNotifier>();
+builder.Services.AddSingleton<SessionNotifier>();
 
 var app = builder.Build();
 
