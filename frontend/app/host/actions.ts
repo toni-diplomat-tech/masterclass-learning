@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { backendUrl } from "@/lib/backend";
 import { importCourse, type ImportSummary } from "@/lib/courses";
-import { createMasterclass, openMasterclass } from "@/lib/masterclasses";
+import { closeMasterclass, createMasterclass, openMasterclass } from "@/lib/masterclasses";
 import { HOST_COOKIE, HOST_LOGIN_PATH } from "@/lib/host-cookie";
 import { readHostCookie } from "@/lib/host-session";
 
@@ -95,6 +95,21 @@ export async function createMasterclassAction(
   } catch (error) {
     unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
     return { error: "Creating the Masterclass failed. Try again." };
+  }
+}
+
+export type CloseMasterclassState = { problems?: string[]; error?: string };
+
+/** Closes the Masterclass from its projector view, which then shows the Masterclass leaderboard. */
+export async function closeMasterclassAction(masterclassId: number): Promise<CloseMasterclassState> {
+  try {
+    const { problems } = await closeMasterclass(masterclassId);
+    if (problems.length > 0) return { problems };
+    refresh();
+    return {};
+  } catch (error) {
+    unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
+    return { error: "Closing the Masterclass failed. Try again." };
   }
 }
 
