@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { currentParticipant } from "@/lib/participant";
+import { currentRecapToken } from "@/lib/recaps";
 import { LivePlayer } from "./live-player";
+import { RecapLink } from "./recap-link";
 
 export const metadata: Metadata = { title: "Play · Masterclass Quiz" };
 
@@ -20,6 +22,7 @@ export default function PlayPage() {
 async function Player() {
   const participant = await currentParticipant();
   if (!participant) redirect("/");
+  const recapToken = await currentRecapToken();
 
   return (
     <>
@@ -29,9 +32,12 @@ async function Player() {
         {participant.nickname}
       </h1>
       {participant.masterclassStatus === "Closed" ? (
-        <p>This Masterclass has ended.</p>
+        <>
+          <p>This Masterclass has ended.</p>
+          <RecapLink recapToken={recapToken} />
+        </>
       ) : (
-        <LivePlayer masterclassId={participant.masterclassId} />
+        <LivePlayer masterclassId={participant.masterclassId} recapToken={recapToken} />
       )}
     </>
   );

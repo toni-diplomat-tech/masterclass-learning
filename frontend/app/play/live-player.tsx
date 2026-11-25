@@ -9,6 +9,7 @@ import { followSession, keepFollowing, submitAnswer, type AnswerResult, type Liv
 import { connectToQuizHub } from "@/lib/quiz-hub";
 import { followLeaderboard, leaderboardFor, type SessionLeaderboard } from "@/lib/leaderboard";
 import { MyScore } from "./my-score";
+import { RecapLink } from "./recap-link";
 
 /** This phone's tap on a Question: being sent, locked in by the server, or refused (with the reason). */
 type MyAnswer = { questionId: number; position: number; status: "sending" | "locked" | "refused"; result?: AnswerResult };
@@ -23,7 +24,7 @@ const REFUSALS: Partial<Record<AnswerResult, string>> = {
  * The phone follows the server: Waiting → Question → Answer locked → Revealed → … → Session over.
  * There is nowhere else to go. The hub knows the Participant by their HTTP-only cookie (same origin).
  */
-export function LivePlayer({ masterclassId }: { masterclassId: number }) {
+export function LivePlayer({ masterclassId, recapToken }: { masterclassId: number; recapToken: string | null }) {
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const [answer, setAnswer] = useState<MyAnswer | null>(null);
   const [connected, setConnected] = useState(false);
@@ -78,6 +79,7 @@ export function LivePlayer({ masterclassId }: { masterclassId: number }) {
       {session.step === "ended" && (
         <MyScore leaderboard={leaderboardFor(leaderboard, session.ended.sessionId)} participantId={participantId} sessionOver />
       )}
+      {session.step === "ended" && <RecapLink recapToken={recapToken} />}
       {!connected && <small style={{ display: "block" }}>Connecting to live updates…</small>}
     </>
   );
