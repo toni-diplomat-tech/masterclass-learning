@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import type { WorkshopOverview } from "@/lib/courses";
-import { followSession, keepFollowing, startSession, type LiveSession } from "@/lib/live";
+import { followSession, keepFollowing, startSession, type DifficultyCounts, type LiveSession } from "@/lib/live";
 import { getCurrentState, newerLeaderboard, newerSession, resumeSession } from "@/lib/current-state";
 import { connectToQuizHub } from "@/lib/quiz-hub";
 import { ResumeButton } from "./resume-button";
@@ -78,7 +78,7 @@ export function LiveMasterclass({
     };
   }, [masterclassId, router]);
 
-  const start = async (workshopId: number, mix: { easy: number; medium: number; hard: number }) => {
+  const start = async (workshopId: number, mix: DifficultyCounts) => {
     const connection = connectionRef.current;
     if (!connection || !connected) return ["Not connected to live updates yet. Try again in a moment."];
     return startSession(connection, masterclassId, workshopId, mix);

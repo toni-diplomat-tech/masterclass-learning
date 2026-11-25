@@ -1,8 +1,7 @@
 import { hostFetch } from "./host-session";
+import type { DifficultyCounts } from "./live";
 
 // Server-side only: the Host's Course endpoints on the backend.
-
-export type DifficultyCounts = { easy: number; medium: number; hard: number };
 
 export type WorkshopOverview = { id: number; slug: string; title: string; number: number; questions: DifficultyCounts };
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { WorkshopOverview } from "@/lib/courses";
-import type { DifficultyMix } from "@/lib/live";
+import type { DifficultyCounts } from "@/lib/live";
 
 const DIFFICULTIES = [
   { key: "easy", label: "Easy" },
@@ -10,7 +10,7 @@ const DIFFICULTIES = [
   { key: "hard", label: "Hard" },
 ] as const;
 
-function suggestedMix(workshop: WorkshopOverview | undefined): DifficultyMix {
+function suggestedMix(workshop: WorkshopOverview | undefined): DifficultyCounts {
   const counts = workshop?.questions ?? { easy: 0, medium: 0, hard: 0 };
   return { easy: Math.min(2, counts.easy), medium: Math.min(2, counts.medium), hard: Math.min(1, counts.hard) };
 }
@@ -25,7 +25,7 @@ export function StartSessionDialog({
   onStart,
 }: {
   workshops: WorkshopOverview[];
-  onStart: (workshopId: number, mix: DifficultyMix) => Promise<string[]>;
+  onStart: (workshopId: number, mix: DifficultyCounts) => Promise<string[]>;
 }) {
   const [workshopId, setWorkshopId] = useState(workshops[0]?.id);
   const workshop = workshops.find((w) => w.id === workshopId);
