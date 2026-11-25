@@ -1,0 +1,31 @@
+using System.Text.Json.Serialization;
+
+namespace MasterclassQuiz.Api.Quiz;
+
+/// <summary>Draft: set up in the back office. Open: the Join code works. Closed: no more joining or Sessions.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<MasterclassStatus>))]
+public enum MasterclassStatus
+{
+    Draft = 1,
+    Open = 2,
+    Closed = 3,
+}
+
+/// <summary>A Masterclass as the Host sees it. Times are UTC; <see cref="JoinCode"/> is null until it opens.</summary>
+public sealed record MasterclassOverview(
+    int Id,
+    string Name,
+    int CourseId,
+    string CourseTitle,
+    MasterclassStatus Status,
+    string? JoinCode,
+    int Participants,
+    DateTime CreatedAt,
+    DateTime? OpenedAt,
+    DateTime? ClosedAt);
+
+/// <summary>The created Masterclass, or every reason it wasn't created (then <see cref="Masterclass"/> is null).</summary>
+public sealed record MasterclassCreateResult(MasterclassOverview? Masterclass, IReadOnlyList<string> Problems)
+{
+    public bool Succeeded => Problems.Count == 0;
+}

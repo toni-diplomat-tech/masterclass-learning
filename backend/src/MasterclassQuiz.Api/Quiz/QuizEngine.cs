@@ -9,7 +9,7 @@ namespace MasterclassQuiz.Api.Quiz;
 /// The Quiz engine: the only code that calls stored procedures (ADR 0002).
 /// Business rules live in the procedures; this class passes them the current UTC time as <c>@Now</c>.
 /// </summary>
-public sealed class QuizEngine(DatabaseConnection database, TimeProvider timeProvider)
+public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider timeProvider)
 {
     public async Task<DatabaseHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
