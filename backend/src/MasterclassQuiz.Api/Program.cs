@@ -38,6 +38,10 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<ParticipantNotifier>();
 builder.Services.AddSingleton<SessionNotifier>();
 builder.Services.AddSingleton<SessionRunner>();
+if (builder.Configuration.GetValue(SessionRecovery.EnabledKey, defaultValue: true))
+{
+    builder.Services.AddHostedService<SessionRecovery>();
+}
 
 var app = builder.Build();
 
