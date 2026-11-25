@@ -4,7 +4,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace MasterclassQuiz.Tests;
 
 [Collection(nameof(SqlServerCollection))]
-public class QuizEngineHealthTests(SqlServerFixture sqlServer)
+public sealed class QuizEngineHealthTests(SqlServerFixture sqlServer)
 {
     [Fact]
     public async Task Health_check_reports_the_time_from_the_engine_clock()

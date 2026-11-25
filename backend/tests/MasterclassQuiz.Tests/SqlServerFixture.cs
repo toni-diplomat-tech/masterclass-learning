@@ -9,7 +9,9 @@ namespace MasterclassQuiz.Tests;
 /// </summary>
 public sealed class SqlServerFixture : IAsyncLifetime
 {
+    // Express edition, like docker-compose.yml and ADR 0001.
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
+        .WithEnvironment("MSSQL_PID", "Express")
         .Build();
 
     public DatabaseConnection Connection { get; private set; } = null!;
