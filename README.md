@@ -28,6 +28,10 @@ dotnet run --project backend/src/MasterclassQuiz.Api -- hash-host-password
 
 Without `HOST_PASSWORD_HASH` every login is refused. For the VPS, `deploy/wizard.sh` asks for the password and writes the hash to the server's `.env`.
 
+## Quiz settings
+
+Time to answer per Difficulty is in the `Quiz` section of `backend/src/MasterclassQuiz.Api/appsettings.json` (Easy 5 s, Medium 7 s, Hard 10 s). Override one with an environment variable on the backend, e.g. `Quiz__TimeLimitSeconds__Hard=12`. A Session keeps the limits it started with.
+
 ## Test
 
 Docker must be running: the engine tests start SQL Server with Testcontainers.
