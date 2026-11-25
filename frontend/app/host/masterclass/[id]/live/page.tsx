@@ -5,9 +5,10 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Suspense } from "react";
 import { openMasterclassAction } from "@/app/host/actions";
+import { listCourses } from "@/lib/courses";
 import { requireHost } from "@/lib/host-session";
 import { getMasterclass, type MasterclassOverview } from "@/lib/masterclasses";
-import { ParticipantCount } from "./participant-count";
+import { LiveMasterclass } from "./live-masterclass";
 
 export const metadata: Metadata = { title: "Projector · Masterclass Quiz" };
 
@@ -36,7 +37,7 @@ async function Projector({ params }: { params: Promise<{ id: string }> }) {
       <h1>{masterclass.name}</h1>
       <p>{masterclass.courseTitle}</p>
       {masterclass.status === "Draft" && <OpenMasterclass masterclass={masterclass} />}
-      {masterclass.status === "Open" && <JoinInvitation masterclass={masterclass} />}
+      {masterclass.status === "Open" && <OpenProjector masterclass={masterclass} />}
       {masterclass.status === "Closed" && <p>This Masterclass is closed.</p>}
     </>
   );
@@ -50,6 +51,16 @@ function OpenMasterclass({ masterclass }: { masterclass: MasterclassOverview }) 
         Open Masterclass
       </button>
     </form>
+  );
+}
+
+// The live part: Join invitation and count, start-Session dialog with the Course's Workshops, Questions.
+async function OpenProjector({ masterclass }: { masterclass: MasterclassOverview }) {
+  const course = (await listCourses()).find((c) => c.id === masterclass.courseId);
+  return (
+    <LiveMasterclass masterclassId={masterclass.id} initialParticipants={masterclass.participants} workshops={course?.workshops ?? []}>
+      <JoinInvitation masterclass={masterclass} />
+    </LiveMasterclass>
   );
 }
 
@@ -72,7 +83,6 @@ async function JoinInvitation({ masterclass }: { masterclass: MasterclassOvervie
         style={{ width: "min(40vh, 80vw)", margin: "0 auto", background: "#fff" }}
         dangerouslySetInnerHTML={{ __html: qrSvg }}
       />
-      <ParticipantCount masterclassId={masterclass.id} initial={masterclass.participants} />
     </section>
   );
 }
