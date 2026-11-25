@@ -107,25 +107,50 @@ BEGIN
     ---------------------------------------------------------------------------------------------------
     DECLARE @Problems TABLE (Seq int IDENTITY PRIMARY KEY, Problem nvarchar(max) NOT NULL);
 
-    -- Questions
+    -- Questions, then their options
     INSERT @Problems (Problem)
     SELECT problem.Text
-    FROM #Questions q
-    CROSS APPLY (
-        SELECT COUNT(*) AS Total, ISNULL(SUM(CAST(o.IsCorrect AS int)), 0) AS Correct
-        FROM #Options o WHERE o.QuestionPosition = q.Position) options
-    CROSS APPLY (VALUES
-        (-1, CASE WHEN q.LessonSlug IS NOT NULL AND NOT EXISTS (SELECT 1 FROM #Lessons l WHERE l.Slug = q.LessonSlug)
-                  THEN q.Label + N' names Lesson ''' + q.LessonSlug + N''', which is not in the file.' END),
-        (0, CASE WHEN options.Total NOT BETWEEN 2 AND 4
-                 THEN q.Label + N' has ' + CAST(options.Total AS nvarchar(10))
-                      + IIF(options.Total = 1, N' option', N' options') + N'; it needs 2 to 4.' END),
-        (1, CASE WHEN options.Correct = 0 THEN q.Label + N' has no correct option; exactly one must be correct.' END),
-        (2, CASE WHEN options.Correct > 1
-                 THEN q.Label + N' has ' + CAST(options.Correct AS nvarchar(10)) + N' correct options; exactly one must be correct.' END)
-    ) problem (Seq, Text)
+    FROM (
+        SELECT q.Position, 0 AS OptionPosition, checks.Seq, checks.Text
+        FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY StableId ORDER BY Position) AS Occurrence
+            FROM #Questions) q
+        CROSS APPLY (
+            SELECT COUNT(*) AS Total, ISNULL(SUM(CAST(o.IsCorrect AS int)), 0) AS Correct
+            FROM #Options o WHERE o.QuestionPosition = q.Position) options
+        CROSS APPLY (VALUES
+            (1, CASE WHEN q.StableId IS NULL THEN q.Label + N' has no id.' END),
+            (2, CASE WHEN LEN(q.StableId) > 100 THEN q.Label + N' has an id longer than 100 characters.' END),
+            (3, CASE WHEN q.Occurrence = 2 THEN N'Question id ''' + q.StableId + N''' is used more than once.' END),
+            (4, CASE WHEN q.LessonSlug IS NULL THEN q.Label + N' has no Lesson.' END),
+            (5, CASE WHEN NOT EXISTS (SELECT 1 FROM #Lessons l WHERE l.Slug = q.LessonSlug)
+                     THEN q.Label + N' names Lesson ''' + q.LessonSlug + N''', which is not in the file.' END),
+            (6, CASE WHEN q.Difficulty IS NULL THEN q.Label + N' has no Difficulty; it must be Easy, Medium or Hard.'
+                     WHEN q.Difficulty NOT IN (N'Easy', N'Medium', N'Hard')
+                     THEN q.Label + N' has Difficulty ''' + q.Difficulty + N'''; it must be Easy, Medium or Hard.' END),
+            (7, CASE WHEN q.Text IS NULL THEN q.Label + N' has no text.' END),
+            (8, CASE WHEN LEN(q.Text) > 2000 THEN q.Label + N' has text longer than 2000 characters.' END),
+            (9, CASE WHEN options.Total NOT BETWEEN 2 AND 4
+                     THEN q.Label + N' has ' + CAST(options.Total AS nvarchar(10))
+                          + IIF(options.Total = 1, N' option', N' options') + N'; it needs 2 to 4.' END),
+            (10, CASE WHEN options.Correct = 0 THEN q.Label + N' has no correct option; exactly one must be correct.' END),
+            (11, CASE WHEN options.Correct > 1
+                      THEN q.Label + N' has ' + CAST(options.Correct AS nvarchar(10)) + N' correct options; exactly one must be correct.' END)
+        ) checks (Seq, Text)
+
+        UNION ALL
+
+        SELECT q.Position, o.Position, checks.Seq, checks.Text
+        FROM #Options o
+        JOIN #Questions q ON q.Position = o.QuestionPosition
+        CROSS APPLY (VALUES
+            (1, CASE WHEN o.Text IS NULL THEN N'Option ' + CAST(o.Position AS nvarchar(10)) + N' of ' + q.Label + N' has no text.' END),
+            (2, CASE WHEN LEN(o.Text) > 1000
+                     THEN N'Option ' + CAST(o.Position AS nvarchar(10)) + N' of ' + q.Label + N' has text longer than 1000 characters.' END)
+        ) checks (Seq, Text)
+    ) problem
     WHERE problem.Text IS NOT NULL
-    ORDER BY q.Position, problem.Seq;
+    ORDER BY problem.Position, problem.OptionPosition, problem.Seq;
 
     IF EXISTS (SELECT 1 FROM @Problems)
     BEGIN

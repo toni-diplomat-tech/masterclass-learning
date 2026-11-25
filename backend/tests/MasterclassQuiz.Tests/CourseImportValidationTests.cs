@@ -50,6 +50,28 @@ public sealed class CourseImportValidationTests(SqlServerFixture sqlServer)
         await AssertRejectedAsync("Question 'unit-tests-002' names Lesson 'writing-your-second-test', which is not in the file.");
     }
 
+    [Theory]
+    [InlineData("id", null, "Question #2 has no id.")]
+    [InlineData("id", "unit-tests-001", "Question id 'unit-tests-001' is used more than once.")]
+    [InlineData("lesson", null, "Question 'unit-tests-002' has no Lesson.")]
+    [InlineData("difficulty", "Extreme", "Question 'unit-tests-002' has Difficulty 'Extreme'; it must be Easy, Medium or Hard.")]
+    [InlineData("difficulty", null, "Question 'unit-tests-002' has no Difficulty; it must be Easy, Medium or Hard.")]
+    [InlineData("text", "   ", "Question 'unit-tests-002' has no text.")]
+    public async Task A_question_needs_a_unique_id_a_lesson_a_difficulty_and_text(string property, string? value, string problem)
+    {
+        _file.Question("unit-tests-002")[property] = value;
+
+        await AssertRejectedAsync(problem);
+    }
+
+    [Fact]
+    public async Task Every_option_needs_text()
+    {
+        _file.Question("unit-tests-002")["options"]![2]!["text"] = "";
+
+        await AssertRejectedAsync("Option 3 of Question 'unit-tests-002' has no text.");
+    }
+
     [Fact]
     public async Task Every_problem_is_reported_in_file_order()
     {
