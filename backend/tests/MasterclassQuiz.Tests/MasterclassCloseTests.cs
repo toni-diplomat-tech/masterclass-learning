@@ -55,6 +55,20 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_recap_stays_readable_after_the_masterclass_is_closed()
+    {
+        var meeting = await RunOneQuestionSessionAsync();
+        var recapToken = await Engine.GetRecapTokenAsync(meeting.Tokens[0]);
+        await Engine.CloseMasterclassAsync(meeting.MasterclassId);
+
+        var recap = await Engine.GetRecapAsync(recapToken!);
+
+        Assert.Equal(MasterclassStatus.Closed, recap!.MasterclassStatus);
+        Assert.Equal(RecapOutcome.PerfectScore, Assert.Single(recap.Workshops).Outcome);
+        Assert.Equal(recapToken, await Engine.GetRecapTokenAsync(meeting.Tokens[0]));
+    }
+
+    [Fact]
     public async Task Closing_frees_the_join_code_for_another_open_masterclass()
     {
         // Engines with the same seed draw the same codes: the second opening draws the first one's code.
