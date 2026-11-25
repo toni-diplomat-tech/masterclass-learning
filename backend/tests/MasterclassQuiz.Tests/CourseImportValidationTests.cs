@@ -149,6 +149,18 @@ public sealed class CourseImportValidationTests(SqlServerFixture sqlServer)
             "Question 'unit-tests-003' names Lesson 'no-such-lesson', which is not in the file.");
     }
 
+    [Theory]
+    [InlineData("", "The import file is empty.")]
+    [InlineData("[]", "The import file must be a JSON object.")]
+    [InlineData("course: testing", "The import file is not valid JSON (line 1, position 1).")]
+    [InlineData("{ \"workshops\": [{ \"number\": \"one\" }] }", "The import file has a value of the wrong type at $.workshops[0].number.")]
+    public async Task A_file_that_is_not_a_json_object_of_the_right_types_is_rejected(string contents, string problem)
+    {
+        var result = await _engine.ImportCourseAsync(contents);
+
+        Assert.Equal([problem], result.Problems);
+    }
+
     private async Task AssertRejectedAsync(params string[] problems)
     {
         var result = await _engine.ImportCourseAsync(_file.ToJsonString());

@@ -69,12 +69,8 @@ public sealed record OptionDetail(int Position, string Text, bool Correct);
 /// </summary>
 internal static class ImportFile
 {
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = false,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-    };
+    // Property names are matched exactly (camelCase), as the procedure reads them.
+    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = false };
 
     /// <summary>The file as canonical JSON for the procedure, or the reason it can't be read.</summary>
     public static (string? Json, string? Problem) Normalize(string fileContents)
@@ -84,22 +80,35 @@ internal static class ImportFile
             return (null, "The import file is empty.");
         }
 
+        JsonDocument document;
         try
         {
-            var file = JsonSerializer.Deserialize<FileDto>(fileContents, Options);
-            if (file is null)
+            document = JsonDocument.Parse(fileContents, new JsonDocumentOptions
             {
-                return (null, "The import file must be a JSON object.");
-            }
-            return (JsonSerializer.Serialize(file, Options), null);
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            });
         }
         catch (JsonException ex)
         {
-            var where = ex.LineNumber is { } line
-                ? $" at line {line + 1}, position {(ex.BytePositionInLine ?? 0) + 1}"
-                : "";
-            var path = string.IsNullOrEmpty(ex.Path) || ex.Path == "$" ? "" : $" ({ex.Path})";
-            return (null, $"The import file is not valid JSON or has a value of the wrong type{where}{path}.");
+            return (null, $"The import file is not valid JSON (line {ex.LineNumber + 1}, position {ex.BytePositionInLine + 1}).");
+        }
+
+        using (document)
+        {
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return (null, "The import file must be a JSON object.");
+            }
+            try
+            {
+                var file = document.RootElement.Deserialize<FileDto>(Options)!;
+                return (JsonSerializer.Serialize(file, Options), null);
+            }
+            catch (JsonException ex)
+            {
+                return (null, $"The import file has a value of the wrong type at {ex.Path}.");
+            }
         }
     }
 
