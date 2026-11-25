@@ -1,4 +1,4 @@
--- Creates or updates a Course from an import file (docs/import-file.md), as JSON normalized by the
+-- Creates or updates a Course from an import file (docs/import-file/README.md), as JSON normalized by the
 -- Quiz engine. Takes time only from @Now.
 --
 -- Result sets: first the problems (one nvarchar per row). If there are any, nothing is stored and that

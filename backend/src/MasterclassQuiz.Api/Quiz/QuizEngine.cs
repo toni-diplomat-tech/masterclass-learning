@@ -23,7 +23,7 @@ public sealed class QuizEngine(DatabaseConnection database, TimeProvider timePro
     }
 
     /// <summary>
-    /// Creates or updates a Course from an import file's contents (format: docs/import-file.md). The
+    /// Creates or updates a Course from an import file's contents (format: docs/import-file/README.md). The
     /// import is an upsert keyed on slugs and Question ids: Questions missing from the file are retired,
     /// never deleted. A file with any problem is rejected as a whole.
     /// </summary>
