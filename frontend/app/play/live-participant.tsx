@@ -25,7 +25,7 @@ const REFUSALS: Partial<Record<AnswerResult, string>> = {
  * The phone follows the server: Waiting → Question → Answer locked → Revealed → … → Session over.
  * There is nowhere else to go. The hub knows the Participant by their HTTP-only cookie (same origin).
  */
-export function LivePlayer({ masterclassId, recapToken }: { masterclassId: number; recapToken: string | null }) {
+export function LiveParticipant({ masterclassId, recapToken }: { masterclassId: number; recapToken: string | null }) {
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const [answer, setAnswer] = useState<MyAnswer | null>(null);
   const [connected, setConnected] = useState(false);
@@ -49,6 +49,8 @@ export function LivePlayer({ masterclassId, recapToken }: { masterclassId: numbe
         // On every (re)connect: the server says where the Session is and what this phone answered.
         const state = await getCurrentState(connection, masterclassId);
         if (!state) return;
+        // Closed while this phone was away: the page renders again as "ended", with the Recap link.
+        if (state.masterclassStatus === "Closed") router.refresh();
         setParticipantId(state.participant?.participantId ?? null);
         setLeaderboard((shown) => newerLeaderboard(shown, state.leaderboard));
         setSession((shown) => newerSession(shown, state));

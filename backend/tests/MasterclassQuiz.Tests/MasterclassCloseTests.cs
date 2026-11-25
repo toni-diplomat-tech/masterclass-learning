@@ -86,7 +86,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     public async Task A_draft_masterclass_can_not_be_closed()
     {
         var import = await Engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
-        var draft = (await Engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026")).Masterclass!;
+        var draft = (await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026")).Masterclass!;
 
         var closed = await Engine.CloseMasterclassAsync(draft.Id);
 
@@ -97,7 +97,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_masterclass_can_not_be_closed_while_a_session_runs()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
 
         var closed = await Engine.CloseMasterclassAsync(meeting.MasterclassId);
 
@@ -125,9 +125,9 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     }
 
     // A Masterclass whose "unit-tests" Session ran its one Easy Question (answered correctly) and ended.
-    private async Task<MeetingFixture> RunOneQuestionSessionAsync()
+    private async Task<RunningSessionFixture> RunOneQuestionSessionAsync()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(meeting.SessionId);
         Assert.NotNull((await Engine.AdvanceSessionAsync(meeting.SessionId)).Ended);
@@ -144,7 +144,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     {
         var engine = new QuizEngine(sqlServer.Connection, _time, random);
         var import = await engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
-        var created = await engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         return (await engine.OpenMasterclassAsync(created.Masterclass!.Id))!;
     }
 }

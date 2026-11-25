@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { currentParticipant } from "@/lib/participant";
 import { currentRecapToken } from "@/lib/recaps";
-import { LivePlayer } from "./live-player";
+import { LiveParticipant } from "./live-participant";
 import { RecapLink } from "./recap-link";
 
 export const metadata: Metadata = { title: "Play · Masterclass Quiz" };
@@ -12,14 +12,14 @@ export default function PlayPage() {
   return (
     <main style={{ padding: "2rem", textAlign: "center" }}>
       <Suspense fallback={<p>Loading…</p>}>
-        <Player />
+        <ParticipantScreen />
       </Suspense>
     </main>
   );
 }
 
-// The phone follows the server (LivePlayer): waiting screen, then each Question as it starts.
-async function Player() {
+// The phone follows the server (LiveParticipant): waiting screen, then each Question as it starts.
+async function ParticipantScreen() {
   const participant = await currentParticipant();
   if (!participant) redirect("/");
   const recapToken = await currentRecapToken();
@@ -37,7 +37,7 @@ async function Player() {
           <RecapLink recapToken={recapToken} />
         </>
       ) : (
-        <LivePlayer masterclassId={participant.masterclassId} recapToken={recapToken} />
+        <LiveParticipant masterclassId={participant.masterclassId} recapToken={recapToken} />
       )}
     </>
   );

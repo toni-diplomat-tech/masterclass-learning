@@ -4,7 +4,8 @@ import type { HubConnection } from "@microsoft/signalr";
 
 export type Difficulty = "Easy" | "Medium" | "Hard";
 
-export type DifficultyMix = { easy: number; medium: number; hard: number };
+/** A number per Difficulty: a Workshop's Question counts, or the mix the Host sets for a Session. */
+export type DifficultyCounts = { easy: number; medium: number; hard: number };
 
 /** Server → clients when a Question starts. Never says which option is correct. Times are UTC ISO strings. */
 export type QuestionStarted = {
@@ -119,7 +120,7 @@ export async function startSession(
   connection: HubConnection,
   masterclassId: number,
   workshopId: number,
-  mix: DifficultyMix,
+  mix: DifficultyCounts,
 ): Promise<string[]> {
   const reply = await connection.invoke<{ problems: string[] }>("StartSession", masterclassId, workshopId, mix);
   return reply.problems;

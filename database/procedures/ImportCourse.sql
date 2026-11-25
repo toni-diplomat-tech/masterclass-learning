@@ -2,7 +2,7 @@
 -- Quiz engine. Takes time only from @Now.
 --
 -- Result sets: first the problems (one nvarchar per row). If there are any, nothing is stored and that
--- is the only result set. Otherwise a second result set has one summary row.
+-- is the only result set. Otherwise a second result set has one outcome row.
 --
 -- Upsert rules: Workshops are keyed on (Course, slug), Lessons and Questions on (Course, slug/id), and
 -- options on (Question, position). Text, titles, numbers, URLs and Difficulty are updated in place.
@@ -279,7 +279,7 @@ BEGIN
     WHERE l.CourseId = @CourseId AND l.RetiredAt IS NULL
       AND NOT EXISTS (SELECT 1 FROM #Lessons s WHERE s.Slug = l.Slug);
 
-    -- Questions: work out which existing ones change before touching them, so the summary can count them.
+    -- Questions: work out which existing ones change before touching them, so the outcome can count them.
     UPDATE q SET
         DifficultyLevel = CASE q.Difficulty WHEN N'Easy' THEN 1 WHEN N'Medium' THEN 2 WHEN N'Hard' THEN 3 END,
         LessonId = l.Id,

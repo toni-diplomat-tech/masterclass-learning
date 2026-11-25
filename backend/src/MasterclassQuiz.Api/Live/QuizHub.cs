@@ -66,8 +66,7 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
     /// </summary>
     public async Task<Participant?> WatchAsParticipant()
     {
-        var token = Context.GetHttpContext()?.Request.Cookies[ParticipantEndpoints.CookieName];
-        if (string.IsNullOrEmpty(token))
+        if (ParticipantToken() is not { } token)
         {
             return null;
         }
@@ -102,8 +101,7 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
     /// </summary>
     public async Task<AnswerReply> SubmitAnswer(int questionId, int option)
     {
-        var token = Context.GetHttpContext()?.Request.Cookies[ParticipantEndpoints.CookieName];
-        if (string.IsNullOrEmpty(token))
+        if (ParticipantToken() is not { } token)
         {
             return new AnswerReply(AnswerResult.UnknownParticipant);
         }
@@ -118,6 +116,10 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
         }
         return new AnswerReply(submitted.Result);
     }
+
+    // The caller's participant cookie (set when they joined); null without one.
+    private string? ParticipantToken() =>
+        Context.GetHttpContext()?.Request.Cookies[ParticipantEndpoints.CookieName] is { Length: > 0 } token ? token : null;
 }
 
 public sealed record SessionStartReply(IReadOnlyList<string> Problems);

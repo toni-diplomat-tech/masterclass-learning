@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.Extensions.Time.Testing;
@@ -96,6 +97,24 @@ public sealed class ResultsTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task The_results_read_the_same_after_the_masterclass_is_closed()
+    {
+        var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(2, 0, 0));
+        var (right, wrong) = (await meeting.JoinAsync(), await meeting.JoinAsync());
+        var session = await meeting.StartSessionAsync("unit-tests");
+        await meeting.FinishSessionAsync(session, new() { [right] = _ => 1, [wrong] = _ => 2 });
+        var whileOpen = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
+
+        Assert.True((await Engine.CloseMasterclassAsync(meeting.MasterclassId)).Succeeded);
+        var afterClose = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
+
+        Assert.Equal((MasterclassStatus.Open, MasterclassStatus.Closed), (whileOpen!.MasterclassStatus, afterClose!.MasterclassStatus));
+        Assert.Equal(Json(whileOpen with { MasterclassStatus = MasterclassStatus.Closed }), Json(afterClose));
+        Assert.Equal(2, afterClose.Participants.Count);
+        Assert.Equal([50, 50], afterClose.Sessions.Single().Questions.Select(q => q.PercentCorrect));
+    }
+
+    [Fact]
     public async Task A_masterclass_without_sessions_has_no_results_yet_and_an_unknown_one_has_none()
     {
         var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(1, 0, 0));
@@ -109,13 +128,16 @@ public sealed class ResultsTests(SqlServerFixture sqlServer)
         Assert.Null(await Engine.GetMasterclassResultsAsync(-1));
     }
 
+    // Records holding lists compare the lists by reference; compare what goes over the wire instead.
+    private static string Json(object? value) => JsonSerializer.Serialize(value);
+
     private async Task<Meeting> OpenMeetingAsync(JsonObject importFile)
     {
         var import = await Engine.ImportCourseAsync(importFile.ToJsonString());
         Assert.Empty(import.Problems);
-        var created = await Engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         var opened = await Engine.OpenMasterclassAsync(created.Masterclass!.Id);
-        var workshops = (await Engine.ListCoursesAsync()).Single(c => c.Id == import.Summary.CourseId).Workshops;
+        var workshops = (await Engine.ListCoursesAsync()).Single(c => c.Id == import.Outcome.CourseId).Workshops;
         return new Meeting(this, opened!.Id, opened.JoinCode!, workshops.ToDictionary(w => w.Slug, w => (w.Id, w.Questions.Easy)));
     }
 

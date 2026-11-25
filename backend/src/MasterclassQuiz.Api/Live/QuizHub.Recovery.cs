@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using MasterclassQuiz.Api.Participants;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -18,8 +17,7 @@ public sealed partial class QuizHub
     /// </summary>
     public async Task<CurrentState?> GetCurrentState(int masterclassId)
     {
-        var token = Context.GetHttpContext()?.Request.Cookies[ParticipantEndpoints.CookieName];
-        var state = await engine.GetCurrentStateAsync(masterclassId, string.IsNullOrEmpty(token) ? null : token, Context.ConnectionAborted);
+        var state = await engine.GetCurrentStateAsync(masterclassId, ParticipantToken(), Context.ConnectionAborted);
         if (state is null || (state.Participant is null && !IsHost(Context.User)))
         {
             return null;

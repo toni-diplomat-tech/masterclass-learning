@@ -8,6 +8,7 @@
 -- revealed Question, whether they can answer it (they were in the Masterclass when it started), the option
 -- they chose and, once revealed only, its Outcome (1 Correct, 2 Incorrect, 3 Timed out).
 -- dbo.GetStartedQuestion / dbo.GetRevealedQuestion read the Question itself (QuestionId says which).
+-- MasterclassStatus (1 Draft, 2 Open, 3 Closed) lets a screen that missed the close see it.
 -- No row for an unknown Masterclass.
 CREATE OR ALTER PROCEDURE dbo.GetCurrentState
     @MasterclassId int,
@@ -17,6 +18,7 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT m.Id AS MasterclassId,
+           CAST(m.Status AS int) AS MasterclassStatus,
            session.Id AS SessionId,
            CASE
                WHEN session.Id IS NULL THEN N'Waiting'

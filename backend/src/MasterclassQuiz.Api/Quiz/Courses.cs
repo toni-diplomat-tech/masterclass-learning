@@ -14,9 +14,9 @@ public enum Difficulty
 
 /// <summary>
 /// What an import did. <see cref="Problems"/> lists every reason the file was rejected; when there are
-/// any, nothing was stored and <see cref="Summary"/> is null.
+/// any, nothing was stored and <see cref="Outcome"/> is null.
 /// </summary>
-public sealed record CourseImportResult(CourseImportSummary? Summary, IReadOnlyList<string> Problems)
+public sealed record CourseImportResult(CourseImportOutcome? Outcome, IReadOnlyList<string> Problems)
 {
     public bool Succeeded => Problems.Count == 0;
 
@@ -24,7 +24,7 @@ public sealed record CourseImportResult(CourseImportSummary? Summary, IReadOnlyL
 }
 
 /// <summary>The imported Course's size, and how its Questions changed compared with the previous import.</summary>
-public sealed record CourseImportSummary(
+public sealed record CourseImportOutcome(
     int CourseId,
     string CourseSlug,
     string CourseTitle,

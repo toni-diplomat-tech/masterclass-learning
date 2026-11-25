@@ -46,9 +46,9 @@ public sealed class CourseImportTests(SqlServerFixture sqlServer)
 
         var second = await ImportAsync(file);
 
-        Assert.Equal((4, 0, 0), (first.Summary!.QuestionsAdded, first.Summary.QuestionsUpdated, first.Summary.QuestionsRetired));
-        Assert.Equal((0, 0, 0), (second.Summary!.QuestionsAdded, second.Summary.QuestionsUpdated, second.Summary.QuestionsRetired));
-        Assert.Equal(first.Summary.CourseId, second.Summary.CourseId);
+        Assert.Equal((4, 0, 0), (first.Outcome!.QuestionsAdded, first.Outcome.QuestionsUpdated, first.Outcome.QuestionsRetired));
+        Assert.Equal((0, 0, 0), (second.Outcome!.QuestionsAdded, second.Outcome.QuestionsUpdated, second.Outcome.QuestionsRetired));
+        Assert.Equal(first.Outcome.CourseId, second.Outcome.CourseId);
         Assert.Equal(before, await GetCourseJsonAsync(file));
     }
 
@@ -70,7 +70,7 @@ public sealed class CourseImportTests(SqlServerFixture sqlServer)
 
         var result = await ImportAsync(file);
 
-        Assert.Equal((0, 1, 0), (result.Summary!.QuestionsAdded, result.Summary.QuestionsUpdated, result.Summary.QuestionsRetired));
+        Assert.Equal((0, 1, 0), (result.Outcome!.QuestionsAdded, result.Outcome.QuestionsUpdated, result.Outcome.QuestionsRetired));
         var course = (await _engine.GetCourseAsync(Slug(file)))!;
         Assert.Equal("Testing Fundamentals, 2nd edition", course.Title);
         var updatedLesson = course.Workshops[0].Lessons[1];
@@ -100,10 +100,10 @@ public sealed class CourseImportTests(SqlServerFixture sqlServer)
         var restoring = await ImportAsync(file);
         var restored = await GetQuestionAsync(file, "test-doubles-001");
 
-        Assert.Equal((0, 0, 1), (retiring.Summary!.QuestionsAdded, retiring.Summary.QuestionsUpdated, retiring.Summary.QuestionsRetired));
+        Assert.Equal((0, 0, 1), (retiring.Outcome!.QuestionsAdded, retiring.Outcome.QuestionsUpdated, retiring.Outcome.QuestionsRetired));
         Assert.True(retired.Retired);
         Assert.Equal(questionId, retired.Id);
-        Assert.Equal((0, 1, 0), (restoring.Summary!.QuestionsAdded, restoring.Summary.QuestionsUpdated, restoring.Summary.QuestionsRetired));
+        Assert.Equal((0, 1, 0), (restoring.Outcome!.QuestionsAdded, restoring.Outcome.QuestionsUpdated, restoring.Outcome.QuestionsRetired));
         Assert.False(restored.Retired);
         Assert.Equal(questionId, restored.Id);
     }
@@ -142,7 +142,7 @@ public sealed class CourseImportTests(SqlServerFixture sqlServer)
         await ImportAsync(ImportFiles.Example(Slug(file)));
         var restored = (await _engine.GetCourseAsync(Slug(file)))!;
 
-        Assert.Equal(2, removing.Summary!.QuestionsRetired);
+        Assert.Equal(2, removing.Outcome!.QuestionsRetired);
         Assert.Equal(["unit-tests"], reduced.Workshops.Select(w => w.Slug));
         Assert.Equal(["writing-your-first-test"], reduced.Workshops[0].Lessons.Select(l => l.Slug));
         Assert.Equal(["unit-tests", "test-doubles"], restored.Workshops.Select(w => w.Slug));

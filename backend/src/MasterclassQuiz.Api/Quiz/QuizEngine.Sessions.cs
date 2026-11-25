@@ -1,6 +1,4 @@
-using System.Data;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
@@ -26,20 +24,12 @@ public sealed partial class QuizEngine
         parameters.Add("MediumLimitMs", limits.MillisecondsFor(Difficulty.Medium));
         parameters.Add("HardLimitMs", limits.MillisecondsFor(Difficulty.Hard));
 
-        List<SessionQuestionRow> rows;
-        await using (var connection = new SqlConnection(database.ConnectionString))
+        var (problems, rows) = await QueryUnlessProblemsAsync(
+            "dbo.StartSession", WithNow(WithSeed(parameters)),
+            async results => (await results.ReadAsync<SessionQuestionRow>()).ToList(), cancellationToken);
+        if (rows is null)
         {
-            await using var results = await connection.QueryMultipleAsync(new CommandDefinition(
-                "dbo.StartSession",
-                WithNow(WithSeed(parameters)),
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken));
-            var problems = (await results.ReadAsync<string>()).ToList();
-            if (problems.Count > 0)
-            {
-                return new SessionStartResult(null, problems);
-            }
-            rows = (await results.ReadAsync<SessionQuestionRow>()).ToList();
+            return new SessionStartResult(null, problems);
         }
 
         var sessionId = rows[0].SessionId;
@@ -71,15 +61,7 @@ public sealed partial class QuizEngine
     {
         var parameters = new DynamicParameters();
         parameters.Add("SessionId", sessionId);
-        bool revealed;
-        await using (var connection = new SqlConnection(database.ConnectionString))
-        {
-            revealed = await connection.QuerySingleAsync<bool>(new CommandDefinition(
-                "dbo.RevealQuestion",
-                WithNow(parameters),
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken));
-        }
+        var revealed = await QuerySingleAsync<bool>("dbo.RevealQuestion", WithNow(parameters), cancellationToken);
         return revealed ? await GetRevealedQuestionAsync(sessionId, cancellationToken) : null;
     }
 
@@ -101,21 +83,11 @@ public sealed partial class QuizEngine
         var parameters = new DynamicParameters();
         parameters.Add("SessionId", sessionId);
         parameters.Add("RevealPauseMs", Settings.RevealPauseMilliseconds);
-        var now = timeProvider.GetUtcNow().UtcDateTime;
-        parameters.Add("Now", now, DbType.DateTime2);
-        AdvanceRow row;
-        await using (var connection = new SqlConnection(database.ConnectionString))
-        {
-            row = await connection.QuerySingleAsync<AdvanceRow>(new CommandDefinition(
-                "dbo.AdvanceSession",
-                parameters,
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken));
-        }
+        var row = await QuerySingleAsync<AdvanceRow>("dbo.AdvanceSession", WithNow(parameters), cancellationToken);
         return row.Advanced switch
         {
-            "Started" => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
-            "Ended" => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, now)),
+            Advanced.Started => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
+            Advanced.Ended => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value))),
             _ => new SessionAdvance(null, null),
         };
     }
@@ -126,15 +98,10 @@ public sealed partial class QuizEngine
         var parameters = new DynamicParameters();
         parameters.Add("SessionId", sessionId);
         parameters.Add("RevealPauseMs", Settings.RevealPauseMilliseconds);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        var row = await connection.QuerySingleOrDefaultAsync<ProgressRow>(new CommandDefinition(
-            "dbo.GetSessionProgress",
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        var row = await QuerySingleOrDefaultAsync<ProgressRow>("dbo.GetSessionProgress", parameters, cancellationToken);
         return row is null
             ? null
-            : new SessionProgress(row.SessionId, row.MasterclassId, Enum.Parse<SessionStep>(row.Step), row.DueAt is { } due ? Utc(due) : null);
+            : new SessionProgress(row.SessionId, row.MasterclassId, row.Step, row.DueAt is { } due ? Utc(due) : null);
     }
 
     private QuizSettings Settings => settings ?? new QuizSettings();
@@ -143,14 +110,22 @@ public sealed partial class QuizEngine
     {
         public int SessionId { get; init; }
         public int MasterclassId { get; init; }
-        public string Step { get; init; } = "";
+        public SessionStep Step { get; init; }
         public DateTime? DueAt { get; init; }
     }
 
     private sealed class AdvanceRow
     {
-        public string? Advanced { get; init; }
+        public Advanced? Advanced { get; init; }
         public int? MasterclassId { get; init; }
+        public DateTime? EndedAt { get; init; }
+    }
+
+    // dbo.AdvanceSession's Advanced: what it did (NULL: nothing).
+    private enum Advanced
+    {
+        Started,
+        Ended,
     }
 
     private sealed class SessionQuestionRow

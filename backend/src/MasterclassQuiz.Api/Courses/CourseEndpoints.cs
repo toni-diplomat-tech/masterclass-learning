@@ -22,7 +22,7 @@ public static class CourseEndpoints
 
             var result = await engine.ImportCourseAsync(contents, cancellationToken);
             return result.Succeeded
-                ? Results.Ok(result.Summary)
+                ? Results.Ok(result.Outcome)
                 : Results.Problem(
                     title: "The import file was rejected.",
                     statusCode: StatusCodes.Status400BadRequest,

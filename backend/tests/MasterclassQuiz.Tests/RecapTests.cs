@@ -64,6 +64,24 @@ public sealed class RecapTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_missed_question_keeps_the_options_it_ran_with_after_a_re_import_changes_them()
+    {
+        var file = SessionFiles.WithWorkshopQuestions(1, 0, 0);
+        var meeting = await OpenMeetingAsync(file);
+        var participant = await meeting.JoinAsync();
+        await meeting.RunSessionAsync("unit-tests", new() { [participant] = _ => 2 });
+
+        // The correct option moves to where the Participant's wrong one was, and option 3 is retired.
+        file.Question("easy-1")["options"] = new JsonArray(
+            new JsonObject { ["text"] = "Wrong answer to easy-1" },
+            new JsonObject { ["text"] = "Right answer to easy-1", ["correct"] = true });
+        Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
+
+        var lesson = Assert.Single(Assert.Single((await RecapOfAsync(participant)).Workshops).Lessons);
+        Assert.Equal([new MissedQuestion("Question easy-1?", "Wrong answer to easy-1", false, "Right answer to easy-1")], lesson.Questions);
+    }
+
+    [Fact]
     public async Task Joining_after_a_session_ended_lists_all_its_workshops_lessons_as_not_attended()
     {
         var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(1, 0, 0));
@@ -190,9 +208,9 @@ public sealed class RecapTests(SqlServerFixture sqlServer)
     {
         var import = await Engine.ImportCourseAsync(importFile.ToJsonString());
         Assert.Empty(import.Problems);
-        var created = await Engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         var opened = await Engine.OpenMasterclassAsync(created.Masterclass!.Id);
-        var workshops = (await Engine.ListCoursesAsync()).Single(c => c.Id == import.Summary.CourseId).Workshops;
+        var workshops = (await Engine.ListCoursesAsync()).Single(c => c.Id == import.Outcome.CourseId).Workshops;
         return new Meeting(this, opened!.Id, opened.JoinCode!, workshops.ToDictionary(w => w.Slug, w => w.Id));
     }
 

@@ -194,11 +194,11 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
         var import = await _engine.ImportCourseAsync(file.ToJsonString());
         Assert.Empty(import.Problems);
         var workshopId = (await _engine.ListCoursesAsync())
-            .Single(c => c.Id == import.Summary!.CourseId).Workshops
+            .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
-        var created = await _engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await _engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         await _engine.OpenMasterclassAsync(created.Masterclass!.Id);
-        return new Meeting(created.Masterclass.Id, workshopId, import.Summary.CourseSlug);
+        return new Meeting(created.Masterclass.Id, workshopId, import.Outcome.CourseSlug);
     }
 
     private sealed record Meeting(int MasterclassId, int WorkshopId, string CourseSlug);

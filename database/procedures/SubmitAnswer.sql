@@ -2,6 +2,7 @@
 -- counts only while that Question is running in the Participant's Masterclass and @Now is no later
 -- than its AnswersCloseAt (deadline + grace), even if the reveal is late. Only Participants who were
 -- in the Masterclass when the Question started can answer it, once, without changing it.
+-- The option is judged against the options the Question started with (dbo.SessionQuestionOptions).
 -- Takes time only from @Now. The Answer's points are scored here (see Scoring below).
 --
 -- Returns one row: Result (Accepted, TooLate, AlreadyAnswered, JoinedAfterStart, UnknownOption,
@@ -55,8 +56,8 @@ BEGIN
             WHEN EXISTS (SELECT 1 FROM dbo.Answers WHERE SessionQuestionId = @SessionQuestionId AND ParticipantId = @ParticipantId)
                 THEN N'AlreadyAnswered'
             WHEN NOT EXISTS (
-                SELECT 1 FROM dbo.QuestionOptions
-                WHERE QuestionId = @QuestionId AND Position = @OptionPosition AND RetiredAt IS NULL)
+                SELECT 1 FROM dbo.SessionQuestionOptions
+                WHERE SessionQuestionId = @SessionQuestionId AND Position = @OptionPosition)
                 THEN N'UnknownOption'
             ELSE N'Accepted'
         END;
@@ -76,9 +77,9 @@ BEGIN
                         CASE q.Difficulty WHEN 1 THEN 500 WHEN 2 THEN 750 ELSE 1000 END
                         * (1 - 0.5 * CAST(@ScoredMs AS decimal(19, 6)) / @TimeLimitMs), 0) AS int)
                     ELSE 0 END
-        FROM dbo.QuestionOptions o
-        JOIN dbo.Questions q ON q.Id = o.QuestionId
-        WHERE o.QuestionId = @QuestionId AND o.Position = @OptionPosition;
+        FROM dbo.SessionQuestionOptions o
+        JOIN dbo.Questions q ON q.Id = @QuestionId
+        WHERE o.SessionQuestionId = @SessionQuestionId AND o.Position = @OptionPosition;
     END
 
     COMMIT;

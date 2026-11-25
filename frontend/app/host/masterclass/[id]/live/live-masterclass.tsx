@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { HubConnection } from "@microsoft/signalr";
+import { useRouter } from "next/navigation";
 import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import type { WorkshopOverview } from "@/lib/courses";
-import { followSession, keepFollowing, startSession, type LiveSession } from "@/lib/live";
+import { followSession, keepFollowing, startSession, type DifficultyCounts, type LiveSession } from "@/lib/live";
 import { getCurrentState, newerLeaderboard, newerSession, resumeSession } from "@/lib/current-state";
 import { connectToQuizHub } from "@/lib/quiz-hub";
 import { ResumeButton } from "./resume-button";
@@ -39,6 +40,7 @@ export function LiveMasterclass({
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const [leaderboard, setLeaderboard] = useState<SessionLeaderboard | null>(null);
   const connectionRef = useRef<HubConnection | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const connection = connectToQuizHub();
@@ -51,6 +53,10 @@ export function LiveMasterclass({
     });
     followSession(connection, masterclassId, setSession);
     followLeaderboard(connection, masterclassId, setLeaderboard);
+    // Closed (e.g. from another tab): the page renders again as the closed projector.
+    connection.on("MasterclassClosed", (closed: { masterclassId: number }) => {
+      if (closed.masterclassId === masterclassId) router.refresh();
+    });
 
     const stop = keepFollowing(
       connection,
@@ -60,6 +66,7 @@ export function LiveMasterclass({
         // Where the Session stands now (after a reload, or broadcasts missed while reconnecting).
         const state = await getCurrentState(connection, masterclassId);
         if (!state) return;
+        if (state.masterclassStatus === "Closed") router.refresh();
         setLeaderboard((shown) => newerLeaderboard(shown, state.leaderboard));
         setSession((shown) => newerSession(shown, state));
       },
@@ -69,9 +76,9 @@ export function LiveMasterclass({
       connectionRef.current = null;
       stop();
     };
-  }, [masterclassId]);
+  }, [masterclassId, router]);
 
-  const start = async (workshopId: number, mix: { easy: number; medium: number; hard: number }) => {
+  const start = async (workshopId: number, mix: DifficultyCounts) => {
     const connection = connectionRef.current;
     if (!connection || !connected) return ["Not connected to live updates yet. Try again in a moment."];
     return startSession(connection, masterclassId, workshopId, mix);

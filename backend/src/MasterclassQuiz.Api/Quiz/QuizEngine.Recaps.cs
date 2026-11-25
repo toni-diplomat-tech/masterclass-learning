@@ -1,10 +1,9 @@
 using System.Data;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
-// Recaps: each Participant's summary of a Masterclass, at an unguessable link of its own.
+// Recaps: each Participant's look back at a Masterclass, at an unguessable link of its own.
 public sealed partial class QuizEngine
 {
     /// <summary>
@@ -12,16 +11,11 @@ public sealed partial class QuizEngine
     /// token belongs to nobody. It is a separate secret from the Participant token, so sharing the Recap
     /// link never lets anyone answer as the Participant.
     /// </summary>
-    public async Task<string?> GetRecapTokenAsync(string participantToken, CancellationToken cancellationToken = default)
+    public Task<string?> GetRecapTokenAsync(string participantToken, CancellationToken cancellationToken = default)
     {
         var parameters = new DynamicParameters();
         parameters.Add("Token", participantToken, DbType.AnsiString, size: 200);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        return await connection.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
-            "dbo.GetRecapToken",
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        return QuerySingleOrDefaultAsync<string?>("dbo.GetRecapToken", parameters, cancellationToken);
     }
 
     /// <summary>

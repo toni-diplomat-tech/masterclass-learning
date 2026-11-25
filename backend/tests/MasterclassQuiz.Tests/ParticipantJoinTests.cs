@@ -121,7 +121,7 @@ public sealed class ParticipantJoinTests(SqlServerFixture sqlServer)
 
     private async Task<MasterclassOverview> OpenMasterclassAsync()
     {
-        var course = (await _engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString())).Summary!;
+        var course = (await _engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString())).Outcome!;
         var draft = (await _engine.CreateMasterclassAsync(course.CourseId, "Dev team 2026")).Masterclass!;
         return (await _engine.OpenMasterclassAsync(draft.Id))!;
     }

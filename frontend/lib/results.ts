@@ -1,12 +1,13 @@
 import type { MasterclassStatus } from "./masterclasses";
 import { hostFetch } from "./host-session";
+import type { Difficulty } from "./live";
 
 // Server-side only: the Host's results of a Masterclass. They hold every Participant's Recap token, so
 // they come only through hostFetch.
 
 export type QuestionResult = {
   number: number;
-  difficulty: "Easy" | "Medium" | "Hard";
+  difficulty: Difficulty;
   text: string;
   correct: number;
   incorrect: number;

@@ -24,8 +24,8 @@ public sealed class HostCourseApiTests(SqlServerFixture sqlServer) : IDisposable
         var courses = await client.GetFromJsonAsync<JsonArray>("/api/host/courses");
 
         Assert.Equal(HttpStatusCode.OK, import.StatusCode);
-        var summary = await import.Content.ReadFromJsonAsync<JsonObject>();
-        Assert.Equal(4, (int)summary!["questionsAdded"]!);
+        var outcome = await import.Content.ReadFromJsonAsync<JsonObject>();
+        Assert.Equal(4, (int)outcome!["questionsAdded"]!);
         var course = Assert.Single(courses!, c => (string?)c!["slug"] == (string)file["course"]!["slug"]!)!;
         var unitTests = course["workshops"]![0]!;
         Assert.Equal("Unit tests", (string?)unitTests["title"]);
