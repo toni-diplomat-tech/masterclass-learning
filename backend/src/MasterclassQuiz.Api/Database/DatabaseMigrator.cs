@@ -13,24 +13,28 @@ public static class DatabaseMigrator
 {
     public static string DefaultScriptsDirectory => Path.Combine(AppContext.BaseDirectory, "database");
 
-    public static void Migrate(string connectionString, string scriptsDirectory)
+    public static MigrationReport Migrate(string connectionString, string scriptsDirectory)
     {
         EnsureDatabase.For.SqlDatabase(connectionString);
 
-        Run(DeployChanges.To
+        var migrations = Run(DeployChanges.To
             .SqlDatabase(connectionString)
             .WithScriptsFromFileSystem(ScriptFolder(scriptsDirectory, "migrations"))
             .WithTransactionPerScript()
             .LogToConsole()
             .Build());
 
-        Run(DeployChanges.To
+        var procedures = Run(DeployChanges.To
             .SqlDatabase(connectionString)
             .WithScriptsFromFileSystem(ScriptFolder(scriptsDirectory, "procedures"))
             .JournalTo(new NullJournal())
             .WithTransactionPerScript()
             .LogToConsole()
             .Build());
+
+        return new MigrationReport(
+            migrations.Scripts.Select(s => s.Name).ToList(),
+            procedures.Scripts.Select(s => s.Name).ToList());
     }
 
     // A folder with no scripts yet is not copied to the build output, so create it rather than fail.
@@ -48,3 +52,6 @@ public static class DatabaseMigrator
         return result;
     }
 }
+
+/// <summary>The script names one <see cref="DatabaseMigrator.Migrate"/> call ran, in run order.</summary>
+public sealed record MigrationReport(IReadOnlyList<string> MigrationsApplied, IReadOnlyList<string> ProceduresApplied);
