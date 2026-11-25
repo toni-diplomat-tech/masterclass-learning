@@ -17,13 +17,13 @@ public sealed class SqlServerFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
-        Connection = new DatabaseConnection(ConnectionStringFor("MasterclassQuiz"));
-        DatabaseMigrator.Migrate(Connection.ConnectionString, DatabaseMigrator.DefaultScriptsDirectory);
+        Connection = ConnectionFor("MasterclassQuiz");
+        DatabaseMigrator.Migrate(Connection, DatabaseMigrator.DefaultScriptsDirectory);
     }
 
-    /// <summary>Connection string to a database of the given name on the test server.</summary>
-    public string ConnectionStringFor(string database) =>
-        new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = database }.ConnectionString;
+    /// <summary>Connection to a database of the given name on the test server.</summary>
+    public DatabaseConnection ConnectionFor(string database) =>
+        new(new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = database }.ConnectionString);
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 }

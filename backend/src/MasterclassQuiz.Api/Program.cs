@@ -13,7 +13,7 @@ builder.Services.AddSingleton<QuizEngine>();
 
 var app = builder.Build();
 
-DatabaseMigrator.Migrate(database.ConnectionString, DatabaseMigrator.DefaultScriptsDirectory);
+DatabaseMigrator.Migrate(database, DatabaseMigrator.DefaultScriptsDirectory);
 
 app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, CancellationToken cancellationToken) =>
 {

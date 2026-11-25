@@ -13,24 +13,12 @@ public static class DatabaseMigrator
 {
     public static string DefaultScriptsDirectory => Path.Combine(AppContext.BaseDirectory, "database");
 
-    public static MigrationReport Migrate(string connectionString, string scriptsDirectory)
+    public static MigrationReport Migrate(DatabaseConnection database, string scriptsDirectory)
     {
-        EnsureDatabase.For.SqlDatabase(connectionString);
+        EnsureDatabase.For.SqlDatabase(database.ConnectionString);
 
-        var migrations = Run(DeployChanges.To
-            .SqlDatabase(connectionString)
-            .WithScripts(ScriptsIn(scriptsDirectory, "migrations"))
-            .WithTransactionPerScript()
-            .LogToConsole()
-            .Build());
-
-        var procedures = Run(DeployChanges.To
-            .SqlDatabase(connectionString)
-            .WithScripts(ScriptsIn(scriptsDirectory, "procedures"))
-            .JournalTo(new NullJournal())
-            .WithTransactionPerScript()
-            .LogToConsole()
-            .Build());
+        var migrations = Run(database, ScriptsIn(scriptsDirectory, "migrations"), journaled: true);
+        var procedures = Run(database, ScriptsIn(scriptsDirectory, "procedures"), journaled: false);
 
         return new MigrationReport(
             migrations.Scripts.Select(s => s.Name).ToList(),
@@ -46,9 +34,20 @@ public static class DatabaseMigrator
             : [];
     }
 
-    private static DatabaseUpgradeResult Run(UpgradeEngine upgrader)
+    // Journaled scripts run once each; unjournaled ones run on every call.
+    private static DatabaseUpgradeResult Run(DatabaseConnection database, IEnumerable<SqlScript> scripts, bool journaled)
     {
-        var result = upgrader.PerformUpgrade();
+        var builder = DeployChanges.To
+            .SqlDatabase(database.ConnectionString)
+            .WithScripts(scripts)
+            .WithTransactionPerScript()
+            .LogToConsole();
+        if (!journaled)
+        {
+            builder = builder.JournalTo(new NullJournal());
+        }
+
+        var result = builder.Build().PerformUpgrade();
         if (!result.Successful)
         {
             throw new InvalidOperationException(

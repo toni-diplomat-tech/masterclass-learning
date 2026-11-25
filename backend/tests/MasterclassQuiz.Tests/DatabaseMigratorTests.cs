@@ -13,10 +13,10 @@ public sealed class DatabaseMigratorTests(SqlServerFixture sqlServer) : IDisposa
         Write("migrations/0002_add_example_column.sql", "ALTER TABLE dbo.Example ADD Name nvarchar(50) NULL;");
         Write("migrations/0001_create_example.sql", "CREATE TABLE dbo.Example (Id int NOT NULL);");
         Write("procedures/GetExample.sql", "CREATE OR ALTER PROCEDURE dbo.GetExample AS SELECT Id, Name FROM dbo.Example;");
-        var connectionString = sqlServer.ConnectionStringFor("MigratorTest");
+        var database = sqlServer.ConnectionFor("MigratorTest");
 
-        var first = DatabaseMigrator.Migrate(connectionString, _scripts);
-        var second = DatabaseMigrator.Migrate(connectionString, _scripts);
+        var first = DatabaseMigrator.Migrate(database, _scripts);
+        var second = DatabaseMigrator.Migrate(database, _scripts);
 
         Assert.Equal(["0001_create_example.sql", "0002_add_example_column.sql"], first.MigrationsApplied);
         Assert.Equal(["GetExample.sql"], first.ProceduresApplied);
