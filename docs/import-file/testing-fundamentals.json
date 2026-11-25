@@ -1,0 +1,86 @@
+{
+  "course": {
+    "slug": "testing-fundamentals",
+    "title": "Testing Fundamentals"
+  },
+  "workshops": [
+    {
+      "slug": "unit-tests",
+      "title": "Unit tests",
+      "number": 1,
+      "lessons": [
+        {
+          "slug": "why-we-test",
+          "title": "Why we test",
+          "number": 1,
+          "url": "https://example.com/testing-fundamentals/01-unit-tests/01-why-we-test"
+        },
+        {
+          "slug": "writing-your-first-test",
+          "title": "Writing your first test",
+          "number": 5,
+          "url": "https://example.com/testing-fundamentals/01-unit-tests/05-writing-your-first-test"
+        }
+      ]
+    },
+    {
+      "slug": "test-doubles",
+      "title": "Test doubles",
+      "number": 2,
+      "lessons": [
+        {
+          "slug": "stubs-and-mocks",
+          "title": "Stubs and mocks",
+          "number": 1,
+          "url": "https://example.com/testing-fundamentals/02-test-doubles/01-stubs-and-mocks"
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "unit-tests-001",
+      "lesson": "why-we-test",
+      "difficulty": "Easy",
+      "text": "What is the main benefit of an automated test suite?",
+      "options": [
+        { "text": "It catches regressions before users do", "correct": true },
+        { "text": "It makes the code run faster", "correct": false }
+      ]
+    },
+    {
+      "id": "unit-tests-002",
+      "lesson": "writing-your-first-test",
+      "difficulty": "Medium",
+      "text": "Which three steps make up the Arrange-Act-Assert pattern?",
+      "options": [
+        { "text": "Set up, run the code under test, check the result", "correct": true },
+        { "text": "Compile, deploy, monitor", "correct": false },
+        { "text": "Write, review, merge", "correct": false }
+      ]
+    },
+    {
+      "id": "unit-tests-003",
+      "lesson": "writing-your-first-test",
+      "difficulty": "Hard",
+      "text": "A test passes whether or not the code under test is correct. What is it called?",
+      "options": [
+        { "text": "A flaky test", "correct": false },
+        { "text": "A tautological test", "correct": true },
+        { "text": "An integration test", "correct": false },
+        { "text": "A smoke test", "correct": false }
+      ]
+    },
+    {
+      "id": "test-doubles-001",
+      "lesson": "stubs-and-mocks",
+      "difficulty": "Easy",
+      "text": "What does a stub do?",
+      "options": [
+        { "text": "Returns canned answers to calls made during the test", "correct": true },
+        { "text": "Records calls so the test can verify them", "correct": false },
+        { "text": "Replaces the test runner", "correct": false }
+      ]
+    }
+  ]
+}

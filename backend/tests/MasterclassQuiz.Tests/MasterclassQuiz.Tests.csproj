@@ -21,6 +21,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- The documented example import file, used as a test fixture so the docs stay valid. -->
+  <ItemGroup>
+    <None Include="..\..\..\docs\import-file\*.json" Link="import-file\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\MasterclassQuiz.Api\MasterclassQuiz.Api.csproj" />
   </ItemGroup>
