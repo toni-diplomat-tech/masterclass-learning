@@ -35,6 +35,7 @@ builder.Services.AddHostSession();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ParticipantNotifier>();
 builder.Services.AddSingleton<SessionNotifier>();
+builder.Services.AddSingleton<MasterclassNotifier>();
 builder.Services.AddSingleton<SessionRunner>();
 
 var app = builder.Build();

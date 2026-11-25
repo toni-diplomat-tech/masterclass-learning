@@ -56,12 +56,53 @@ public sealed class HostMasterclassApiTests(SqlServerFixture sqlServer) : IDispo
     }
 
     [Fact]
+    public async Task The_host_closes_a_masterclass_and_its_join_code_stops_working()
+    {
+        var client = await HostClient.LoggedInAsync(_app);
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(client);
+
+        var close = await client.PostAsync($"/api/host/masterclasses/{id}/close", null);
+        var join = await _app.CreateClient().PostAsJsonAsync("/api/participants/join", new { joinCode });
+
+        Assert.Equal(HttpStatusCode.OK, close.StatusCode);
+        Assert.Equal("Closed", (string?)(await close.Content.ReadFromJsonAsync<JsonObject>())!["status"]);
+        Assert.Equal(HttpStatusCode.NotFound, join.StatusCode);
+    }
+
+    [Fact]
+    public async Task Closing_a_draft_is_answered_with_its_problems()
+    {
+        var client = await HostClient.LoggedInAsync(_app);
+        var id = await HostClient.CreateMasterclassAsync(client);
+
+        var close = await client.PostAsync($"/api/host/masterclasses/{id}/close", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, close.StatusCode);
+        var problem = await close.Content.ReadFromJsonAsync<JsonObject>();
+        Assert.Equal(["Only an Open Masterclass can be closed."], problem!["problems"]!.AsArray().Select(p => (string?)p));
+    }
+
+    [Fact]
+    public async Task The_host_gets_the_masterclass_leaderboard()
+    {
+        var client = await HostClient.LoggedInAsync(_app);
+        var (id, _) = await HostClient.OpenMasterclassAsync(client);
+
+        var leaderboard = await client.GetFromJsonAsync<JsonObject>($"/api/host/masterclasses/{id}/leaderboard");
+
+        Assert.Equal(id, (int)leaderboard!["masterclassId"]!);
+        Assert.Empty(leaderboard["entries"]!.AsArray());
+    }
+
+    [Fact]
     public async Task An_unknown_masterclass_is_not_found()
     {
         var client = await HostClient.LoggedInAsync(_app);
 
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/host/masterclasses/-1")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync("/api/host/masterclasses/-1/open", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync("/api/host/masterclasses/-1/close", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/host/masterclasses/-1/leaderboard")).StatusCode);
     }
 
     [Fact]
@@ -73,6 +114,8 @@ public sealed class HostMasterclassApiTests(SqlServerFixture sqlServer) : IDispo
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/host/masterclasses/1")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/host/masterclasses", new { courseId = 1, name = "x" })).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/host/masterclasses/1/open", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/host/masterclasses/1/close", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/host/masterclasses/1/leaderboard")).StatusCode);
     }
 
     public void Dispose() => _app.Dispose();
