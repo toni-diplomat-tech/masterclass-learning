@@ -6,6 +6,7 @@ using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Masterclasses;
 using MasterclassQuiz.Api.Participants;
 using MasterclassQuiz.Api.Quiz;
+using MasterclassQuiz.Api.Recaps;
 
 // `hash-host-password`: read a password from stdin and print the value for HOST_PASSWORD_HASH.
 if (args is ["hash-host-password"])
@@ -66,6 +67,7 @@ app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, Cancell
 
 app.MapHostApi().MapCourseEndpoints().MapMasterclassEndpoints();
 app.MapParticipantEndpoints();
+app.MapRecapEndpoints();
 app.MapHub<QuizHub>(QuizHub.Path);
 
 app.Run();
