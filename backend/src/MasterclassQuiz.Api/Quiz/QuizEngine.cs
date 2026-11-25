@@ -7,9 +7,11 @@ namespace MasterclassQuiz.Api.Quiz;
 
 /// <summary>
 /// The Quiz engine: the only code that calls stored procedures (ADR 0002).
-/// Business rules live in the procedures; this class passes them the current UTC time as <c>@Now</c>.
+/// Business rules live in the procedures; this class passes them the current UTC time as <c>@Now</c>
+/// and, where a rule draws at random (Join codes, Nicknames), a <c>@Seed</c> from <paramref name="random"/>
+/// (default <see cref="Random.Shared"/>), so a test can make the draws repeat.
 /// </summary>
-public sealed class QuizEngine(DatabaseConnection database, TimeProvider timeProvider)
+public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider timeProvider, Random? random = null)
 {
     public async Task<DatabaseHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
@@ -76,6 +78,12 @@ public sealed class QuizEngine(DatabaseConnection database, TimeProvider timePro
             parameters,
             commandType: CommandType.StoredProcedure,
             cancellationToken: cancellationToken));
+    }
+
+    private DynamicParameters WithSeed(DynamicParameters parameters)
+    {
+        parameters.Add("Seed", (random ?? Random.Shared).Next());
+        return parameters;
     }
 
     private DynamicParameters WithNow(DynamicParameters parameters)

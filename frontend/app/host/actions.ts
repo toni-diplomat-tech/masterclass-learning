@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { backendUrl } from "@/lib/backend";
 import { importCourse, type ImportSummary } from "@/lib/courses";
+import { createMasterclass, openMasterclass } from "@/lib/masterclasses";
 import { HOST_COOKIE, HOST_LOGIN_PATH } from "@/lib/host-cookie";
 import { readHostCookie } from "@/lib/host-session";
 
@@ -75,4 +76,30 @@ export async function importCourseFile(_previous: ImportState, formData: FormDat
     unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
     return { error: "The import failed. Try again." };
   }
+}
+
+export type CreateMasterclassState = { problems?: string[]; error?: string };
+
+export async function createMasterclassAction(
+  _previous: CreateMasterclassState,
+  formData: FormData,
+): Promise<CreateMasterclassState> {
+  const courseId = Number(formData.get("courseId"));
+  const name = String(formData.get("name") ?? "");
+
+  try {
+    const result = await createMasterclass(courseId, name);
+    if ("problems" in result) return { problems: result.problems };
+    refresh();
+    return {};
+  } catch (error) {
+    unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
+    return { error: "Creating the Masterclass failed. Try again." };
+  }
+}
+
+/** Opens a Draft Masterclass from its projector view, which then shows the Join code. */
+export async function openMasterclassAction(masterclassId: number): Promise<void> {
+  await openMasterclass(masterclassId);
+  refresh();
 }
