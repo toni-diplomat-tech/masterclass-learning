@@ -13,5 +13,7 @@ public sealed class BackendFactory(SqlServerFixture sqlServer, string? passwordH
     {
         builder.UseSetting("ConnectionStrings:Quiz", sqlServer.Connection.ConnectionString);
         builder.UseSetting("HOST_PASSWORD_HASH", passwordHash ?? "");
+        // Tests share one database full of other tests' unfinished Sessions; RestartRecoveryTests turns it on.
+        builder.UseSetting("Live:ResumeSessionsOnStartup", "false");
     }
 }
