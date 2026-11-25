@@ -1,1 +1,15 @@
 content/
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+
+# Local environment
+.env

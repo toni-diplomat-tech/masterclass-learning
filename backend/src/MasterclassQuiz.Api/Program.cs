@@ -1,0 +1,52 @@
+using System.Text.Json.Serialization;
+using MasterclassQuiz.Api.Database;
+using MasterclassQuiz.Api.Quiz;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var database = new DatabaseConnection(
+    builder.Configuration.GetConnectionString("Quiz")
+    ?? throw new InvalidOperationException("Connection string 'Quiz' is not set."));
+
+builder.Services.AddSingleton(database);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<QuizEngine>();
+
+var app = builder.Build();
+
+DatabaseMigrator.Migrate(database, DatabaseMigrator.DefaultScriptsDirectory);
+
+// Below the frontend health page's 5 s fetch timeout.
+var databaseHealthTimeout = TimeSpan.FromSeconds(3);
+
+app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        // Answer inside the frontend's fetch timeout even when the database is down. SqlClient can
+        // block for its whole connect timeout (15 s) before yielding, ignoring cancellation, so run
+        // the check on the thread pool and stop waiting for it after a few seconds.
+        var health = await Task.Run(() => engine.CheckHealthAsync(cancellationToken), cancellationToken)
+            .WaitAsync(databaseHealthTimeout, cancellationToken);
+        return Results.Ok(new HealthResponse(HealthStatus.Ok, HealthStatus.Ok, health.CheckedAtUtc));
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+    {
+        logger.LogWarning(ex, "Database health check failed");
+        return Results.Json(
+            new HealthResponse(HealthStatus.Ok, HealthStatus.Unreachable, null),
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
+
+app.Run();
+
+internal sealed record HealthResponse(HealthStatus Backend, HealthStatus Database, DateTime? DatabaseCheckedAtUtc);
+
+/// <summary>Serialized as the lowercase strings the frontend's health page matches on.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<HealthStatus>))]
+internal enum HealthStatus
+{
+    [JsonStringEnumMemberName("ok")] Ok,
+    [JsonStringEnumMemberName("unreachable")] Unreachable,
+}
