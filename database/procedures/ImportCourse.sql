@@ -107,6 +107,67 @@ BEGIN
     ---------------------------------------------------------------------------------------------------
     DECLARE @Problems TABLE (Seq int IDENTITY PRIMARY KEY, Problem nvarchar(max) NOT NULL);
 
+    -- Course
+    INSERT @Problems (Problem)
+    SELECT checks.Text
+    FROM (VALUES
+        (1, CASE WHEN @CourseSlug IS NULL THEN N'The Course has no slug.' END),
+        (2, CASE WHEN LEN(@CourseSlug) > 100 THEN N'The Course has a slug longer than 100 characters.' END),
+        (3, CASE WHEN @CourseTitle IS NULL THEN N'The Course has no title.' END),
+        (4, CASE WHEN LEN(@CourseTitle) > 200 THEN N'The Course has a title longer than 200 characters.' END),
+        (5, CASE WHEN NOT EXISTS (SELECT 1 FROM #Workshops) THEN N'The file has no Workshops.' END)
+    ) checks (Seq, Text)
+    WHERE checks.Text IS NOT NULL
+    ORDER BY checks.Seq;
+
+    -- Workshops, each followed by its Lessons
+    INSERT @Problems (Problem)
+    SELECT problem.Text
+    FROM (
+        SELECT w.Position, 0 AS LessonPosition, checks.Seq, checks.Text
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY Slug ORDER BY Position) AS SlugOccurrence,
+                ROW_NUMBER() OVER (PARTITION BY Number ORDER BY Position) AS NumberOccurrence
+            FROM #Workshops) w
+        CROSS APPLY (VALUES
+            (1, CASE WHEN w.Slug IS NULL THEN w.Label + N' has no slug.' END),
+            (2, CASE WHEN LEN(w.Slug) > 100 THEN w.Label + N' has a slug longer than 100 characters.' END),
+            (3, CASE WHEN w.SlugOccurrence = 2 THEN N'Workshop slug ''' + w.Slug + N''' is used more than once.' END),
+            (4, CASE WHEN w.Title IS NULL THEN w.Label + N' has no title.' END),
+            (5, CASE WHEN LEN(w.Title) > 200 THEN w.Label + N' has a title longer than 200 characters.' END),
+            (6, CASE WHEN w.Number IS NULL THEN w.Label + N' has no number.' END),
+            (7, CASE WHEN w.NumberOccurrence = 2 THEN N'Workshop number ' + CAST(w.Number AS nvarchar(10)) + N' is used more than once.' END),
+            (8, CASE WHEN NOT EXISTS (SELECT 1 FROM #Lessons l WHERE l.WorkshopPosition = w.Position) THEN w.Label + N' has no Lessons.' END)
+        ) checks (Seq, Text)
+
+        UNION ALL
+
+        SELECT l.WorkshopPosition, l.Position, checks.Seq, checks.Text
+        FROM (
+            SELECT l.*, w.Label AS WorkshopLabel,
+                ROW_NUMBER() OVER (PARTITION BY l.Slug ORDER BY l.WorkshopPosition, l.Position) AS SlugOccurrence,
+                ROW_NUMBER() OVER (PARTITION BY l.WorkshopPosition, l.Number ORDER BY l.Position) AS NumberOccurrence
+            FROM #Lessons l
+            JOIN #Workshops w ON w.Position = l.WorkshopPosition) l
+        CROSS APPLY (VALUES
+            (1, CASE WHEN l.Slug IS NULL THEN l.Label + N' has no slug.' END),
+            (2, CASE WHEN LEN(l.Slug) > 100 THEN l.Label + N' has a slug longer than 100 characters.' END),
+            (3, CASE WHEN l.SlugOccurrence = 2 THEN N'Lesson slug ''' + l.Slug + N''' is used more than once.' END),
+            (4, CASE WHEN l.Title IS NULL THEN l.Label + N' has no title.' END),
+            (5, CASE WHEN LEN(l.Title) > 200 THEN l.Label + N' has a title longer than 200 characters.' END),
+            (6, CASE WHEN l.Number IS NULL THEN l.Label + N' has no number.' END),
+            (7, CASE WHEN l.NumberOccurrence = 2
+                     THEN l.WorkshopLabel + N' has more than one Lesson number ' + CAST(l.Number AS nvarchar(10)) + N'.' END),
+            (8, CASE WHEN l.Url IS NULL THEN l.Label + N' has no URL.'
+                     WHEN l.Url NOT LIKE N'http://_%' AND l.Url NOT LIKE N'https://_%'
+                     THEN l.Label + N' has URL ''' + l.Url + N'''; it must start with http:// or https://.'
+                     WHEN LEN(l.Url) > 2000 THEN l.Label + N' has a URL longer than 2000 characters.' END)
+        ) checks (Seq, Text)
+    ) problem
+    WHERE problem.Text IS NOT NULL
+    ORDER BY problem.Position, problem.LessonPosition, problem.Seq;
+
     -- Questions, then their options
     INSERT @Problems (Problem)
     SELECT problem.Text

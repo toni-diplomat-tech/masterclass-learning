@@ -73,6 +73,72 @@ public sealed class CourseImportValidationTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task The_course_needs_a_slug_and_a_title()
+    {
+        _file["course"] = new JsonObject { ["title"] = "" };
+
+        await AssertRejectedAsync("The Course has no slug.", "The Course has no title.");
+    }
+
+    [Fact]
+    public async Task The_file_needs_workshops()
+    {
+        _file["workshops"] = new JsonArray();
+        _file["questions"] = new JsonArray();
+
+        await AssertRejectedAsync("The file has no Workshops.");
+    }
+
+    [Theory]
+    [InlineData("slug", null, "Workshop #2 has no slug.")]
+    [InlineData("slug", "unit-tests", "Workshop slug 'unit-tests' is used more than once.")]
+    [InlineData("title", null, "Workshop 'test-doubles' has no title.")]
+    [InlineData("number", null, "Workshop 'test-doubles' has no number.")]
+    [InlineData("number", 1, "Workshop number 1 is used more than once.")]
+    public async Task A_workshop_needs_a_unique_slug_and_number_and_a_title(string property, object? value, string problem)
+    {
+        _file["workshops"]![1]![property] = JsonValue.Create(value);
+
+        await AssertRejectedAsync(problem);
+    }
+
+    [Fact]
+    public async Task A_workshop_needs_lessons()
+    {
+        _file["workshops"]![1]!["lessons"] = new JsonArray();
+        _file["questions"]!.AsArray().Remove(_file.Question("test-doubles-001"));
+
+        await AssertRejectedAsync("Workshop 'test-doubles' has no Lessons.");
+    }
+
+    [Theory]
+    [InlineData("slug", null, "Lesson #1 of Workshop 'test-doubles' has no slug.")]
+    [InlineData("slug", "why-we-test", "Lesson slug 'why-we-test' is used more than once.")]
+    [InlineData("title", null, "Lesson 'stubs-and-mocks' has no title.")]
+    [InlineData("number", null, "Lesson 'stubs-and-mocks' has no number.")]
+    [InlineData("url", null, "Lesson 'stubs-and-mocks' has no URL.")]
+    [InlineData("url", "example.com/stubs", "Lesson 'stubs-and-mocks' has URL 'example.com/stubs'; it must start with http:// or https://.")]
+    public async Task A_lesson_needs_a_unique_slug_a_title_a_number_and_a_web_url(string property, object? value, string problem)
+    {
+        _file["workshops"]![1]!["lessons"]![0]![property] = JsonValue.Create(value);
+        if (property == "slug")
+        {
+            _file["questions"]!.AsArray().Remove(_file.Question("test-doubles-001"));
+        }
+
+        await AssertRejectedAsync(problem);
+    }
+
+    [Fact]
+    public async Task Lesson_numbers_are_unique_within_their_workshop()
+    {
+        _file["workshops"]![0]!["lessons"]![1]!["number"] = 1;
+        _file["workshops"]![1]!["lessons"]![0]!["number"] = 5;
+
+        await AssertRejectedAsync("Workshop 'unit-tests' has more than one Lesson number 1.");
+    }
+
+    [Fact]
     public async Task Every_problem_is_reported_in_file_order()
     {
         _file.Question("unit-tests-003")["lesson"] = "no-such-lesson";
