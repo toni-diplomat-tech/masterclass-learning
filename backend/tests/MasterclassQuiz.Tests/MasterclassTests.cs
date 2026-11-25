@@ -35,6 +35,56 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
         Assert.Equal(["The Masterclass needs a name.", "There is no such Course."], created.Problems);
     }
 
+    [Fact]
+    public async Task Opening_a_masterclass_gives_it_a_six_digit_join_code()
+    {
+        var draft = await CreateMasterclassAsync();
+
+        var opened = await _engine.OpenMasterclassAsync(draft.Id);
+
+        Assert.NotNull(opened);
+        Assert.Equal((MasterclassStatus.Open, Now.UtcDateTime), (opened.Status, opened.OpenedAt));
+        Assert.Matches("^[0-9]{6}$", opened.JoinCode);
+    }
+
+    [Fact]
+    public async Task Opening_an_open_masterclass_again_keeps_its_join_code()
+    {
+        var first = await _engine.OpenMasterclassAsync((await CreateMasterclassAsync()).Id);
+
+        var again = await _engine.OpenMasterclassAsync(first!.Id);
+
+        Assert.Equal((MasterclassStatus.Open, first.JoinCode), (again!.Status, again.JoinCode));
+    }
+
+    [Fact]
+    public async Task Open_masterclasses_never_share_a_join_code()
+    {
+        // Engines with the same seed draw the same codes, so every Masterclass after the first one
+        // draws a code that is already taken and has to look further.
+        var openCodes = new List<string>();
+        for (var i = 0; i < 5; i++)
+        {
+            var engine = new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now), new Random(42));
+            var opened = await engine.OpenMasterclassAsync((await CreateMasterclassAsync()).Id);
+            openCodes.Add(opened!.JoinCode!);
+        }
+
+        Assert.Equal(openCodes.Count, openCodes.Distinct().Count());
+    }
+
+    [Fact]
+    public async Task Opening_an_unknown_masterclass_finds_nothing()
+    {
+        Assert.Null(await _engine.OpenMasterclassAsync(-1));
+    }
+
+    private async Task<MasterclassOverview> CreateMasterclassAsync()
+    {
+        var course = await ImportCourseAsync();
+        return (await _engine.CreateMasterclassAsync(course.CourseId, "Dev team 2026")).Masterclass!;
+    }
+
     private async Task<CourseImportSummary> ImportCourseAsync()
     {
         var result = await _engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());

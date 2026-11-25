@@ -32,6 +32,25 @@ public sealed partial class QuizEngine
         return new MasterclassCreateResult(await GetMasterclassAsync(id, cancellationToken), []);
     }
 
+    /// <summary>
+    /// Opens a Draft Masterclass with a 6-digit Join code unique among Open Masterclasses. An Open one keeps
+    /// its code and a Closed one stays Closed. Returns the Masterclass as it now is; null if there is none.
+    /// </summary>
+    public async Task<MasterclassOverview?> OpenMasterclassAsync(int masterclassId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("MasterclassId", masterclassId);
+        await using (var connection = new SqlConnection(database.ConnectionString))
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                "dbo.OpenMasterclass",
+                WithNow(WithSeed(parameters)),
+                commandType: CommandType.StoredProcedure,
+                cancellationToken: cancellationToken));
+        }
+        return await GetMasterclassAsync(masterclassId, cancellationToken);
+    }
+
     /// <summary>Every Masterclass, newest first.</summary>
     public async Task<IReadOnlyList<MasterclassOverview>> ListMasterclassesAsync(CancellationToken cancellationToken = default) =>
         await QueryMasterclassesAsync(null, cancellationToken);
