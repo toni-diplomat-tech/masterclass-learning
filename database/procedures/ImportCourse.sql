@@ -107,6 +107,26 @@ BEGIN
     ---------------------------------------------------------------------------------------------------
     DECLARE @Problems TABLE (Seq int IDENTITY PRIMARY KEY, Problem nvarchar(max) NOT NULL);
 
+    -- Questions
+    INSERT @Problems (Problem)
+    SELECT problem.Text
+    FROM #Questions q
+    CROSS APPLY (
+        SELECT COUNT(*) AS Total, ISNULL(SUM(CAST(o.IsCorrect AS int)), 0) AS Correct
+        FROM #Options o WHERE o.QuestionPosition = q.Position) options
+    CROSS APPLY (VALUES
+        (-1, CASE WHEN q.LessonSlug IS NOT NULL AND NOT EXISTS (SELECT 1 FROM #Lessons l WHERE l.Slug = q.LessonSlug)
+                  THEN q.Label + N' names Lesson ''' + q.LessonSlug + N''', which is not in the file.' END),
+        (0, CASE WHEN options.Total NOT BETWEEN 2 AND 4
+                 THEN q.Label + N' has ' + CAST(options.Total AS nvarchar(10))
+                      + IIF(options.Total = 1, N' option', N' options') + N'; it needs 2 to 4.' END),
+        (1, CASE WHEN options.Correct = 0 THEN q.Label + N' has no correct option; exactly one must be correct.' END),
+        (2, CASE WHEN options.Correct > 1
+                 THEN q.Label + N' has ' + CAST(options.Correct AS nvarchar(10)) + N' correct options; exactly one must be correct.' END)
+    ) problem (Seq, Text)
+    WHERE problem.Text IS NOT NULL
+    ORDER BY q.Position, problem.Seq;
+
     IF EXISTS (SELECT 1 FROM @Problems)
     BEGIN
         SELECT Problem FROM @Problems ORDER BY Seq;
