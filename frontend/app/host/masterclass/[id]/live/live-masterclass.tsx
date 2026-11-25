@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import { LiveQuestion } from "@/app/live-question";
+import { RevealedQuestion } from "@/app/revealed-question";
 import type { WorkshopOverview } from "@/lib/courses";
-import { keepFollowing, QUESTION_STARTED, startSession, type QuestionStarted } from "@/lib/live";
+import { followSession, keepFollowing, startSession, type LiveSession } from "@/lib/live";
 import { connectToQuizHub } from "@/lib/quiz-hub";
 import { StartSessionDialog } from "./start-session-dialog";
 
@@ -13,9 +14,10 @@ type ParticipantCountUpdate = { masterclassId: number; participants: number };
 
 /**
  * The projector of an Open Masterclass, following it over SignalR: the Join invitation (`children`),
- * the live number of Participants and the start-Session dialog, then the running Question with its
- * countdown. It asks again for the current count on every (re)connect, since SignalR doesn't replay
- * messages missed while away.
+ * the live number of Participants and the start-Session dialog; then the running Question with its
+ * countdown and answer count, its reveal, and so on until the Session ends, when the start dialog
+ * comes back for the next Workshop. It asks again for the current count on every (re)connect, since
+ * SignalR doesn't replay messages missed while away.
  */
 export function LiveMasterclass({
   masterclassId,
@@ -30,7 +32,7 @@ export function LiveMasterclass({
 }) {
   const [count, setCount] = useState(initialParticipants);
   const [connected, setConnected] = useState(false);
-  const [question, setQuestion] = useState<QuestionStarted | null>(null);
+  const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
@@ -42,9 +44,7 @@ export function LiveMasterclass({
     connection.on("ParticipantCountUpdated", (update: ParticipantCountUpdate) => {
       if (update.masterclassId === masterclassId) show(update.participants);
     });
-    connection.on(QUESTION_STARTED, (started: QuestionStarted) => {
-      if (started.masterclassId === masterclassId) setQuestion(started);
-    });
+    followSession(connection, masterclassId, setSession);
 
     const stop = keepFollowing(
       connection,
@@ -66,17 +66,38 @@ export function LiveMasterclass({
     return startSession(connection, masterclassId, workshopId, mix);
   };
 
+  const running = session.step === "question" || session.step === "revealed";
   const participantCount = (
-    <p style={{ fontSize: question ? "1.25rem" : "2rem" }}>
+    <p style={{ fontSize: running ? "1.25rem" : "2rem" }}>
       <span data-testid="participant-count">{count}</span> {count === 1 ? "Participant" : "Participants"} joined
       {!connected && <small style={{ display: "block", fontSize: "1rem" }}>Reconnecting to live updates…</small>}
     </p>
   );
 
-  if (question) {
+  if (session.step === "question") {
+    const answered = session.count?.answered ?? 0;
+    const participants = session.count?.participants;
     return (
       <>
-        <LiveQuestion question={question} large />
+        <LiveQuestion
+          question={session.question}
+          large
+          footer={
+            <p data-testid="answer-count" style={{ fontSize: "2rem" }}>
+              {answered}
+              {participants !== undefined && ` of ${participants}`} answered
+            </p>
+          }
+        />
+        {participantCount}
+      </>
+    );
+  }
+
+  if (session.step === "revealed") {
+    return (
+      <>
+        <RevealedQuestion revealed={session.revealed} large />
         {participantCount}
       </>
     );
@@ -84,6 +105,11 @@ export function LiveMasterclass({
 
   return (
     <>
+      {session.step === "ended" && (
+        <h2 data-testid="session-over" style={{ fontSize: "2.5rem" }}>
+          Session over
+        </h2>
+      )}
       {children}
       {participantCount}
       <StartSessionDialog workshops={workshops} onStart={start} />

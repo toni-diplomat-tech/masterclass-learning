@@ -9,7 +9,7 @@ namespace MasterclassQuiz.Api.Live;
 /// The live meeting, at <see cref="Path"/>. Each Masterclass has one group (<see cref="MasterclassGroup"/>)
 /// that its broadcasts go to. Like the REST endpoints, the hub is a thin caller of the Quiz engine.
 /// </summary>
-public sealed class QuizHub(QuizEngine engine, SessionNotifier sessions) : Hub
+public sealed class QuizHub(QuizEngine engine, SessionNotifier sessions, SessionRunner runner) : Hub
 {
     public const string Path = "/hubs/quiz";
 
@@ -21,6 +21,21 @@ public sealed class QuizHub(QuizEngine engine, SessionNotifier sessions) : Hub
     /// correct option) when a Question starts.
     /// </summary>
     public const string QuestionStarted = nameof(QuestionStarted);
+
+    /// <summary>
+    /// Server → clients: an <see cref="Quiz.AnswerCount"/> (<c>{ masterclassId, sessionId, questionId, answered,
+    /// participants }</c>) after each accepted Answer.
+    /// </summary>
+    public const string AnswerCountUpdated = nameof(AnswerCountUpdated);
+
+    /// <summary>
+    /// Server → clients: a <see cref="Quiz.QuestionRevealed"/> (correct option, answers per option, answered and
+    /// Timed out counts) when the running Question is revealed.
+    /// </summary>
+    public const string QuestionRevealed = nameof(QuestionRevealed);
+
+    /// <summary>Server → clients: a <see cref="Quiz.SessionEnded"/> after the pause following the last reveal.</summary>
+    public const string SessionEnded = nameof(SessionEnded);
 
     public static string MasterclassGroup(int masterclassId) => $"masterclass-{masterclassId}";
 
@@ -69,12 +84,39 @@ public sealed class QuizHub(QuizEngine engine, SessionNotifier sessions) : Hub
         if (result.Session is { } session)
         {
             await sessions.QuestionStartedAsync(session.FirstQuestion);
+            runner.Follow(session.Id);
         }
         return new SessionStartReply(result.Problems);
+    }
+
+    /// <summary>
+    /// A Participant's phone (known by the participant cookie): answer a running Question with the option at
+    /// <paramref name="option"/>. An accepted Answer updates the projector's count; once everyone has
+    /// answered, the Question is revealed. Replies with the result only, never whether it is correct.
+    /// </summary>
+    public async Task<AnswerReply> SubmitAnswer(int questionId, int option)
+    {
+        var token = Context.GetHttpContext()?.Request.Cookies[ParticipantEndpoints.CookieName];
+        if (string.IsNullOrEmpty(token))
+        {
+            return new AnswerReply(AnswerResult.UnknownParticipant);
+        }
+        var submitted = await engine.SubmitAnswerAsync(token, questionId, option, Context.ConnectionAborted);
+        if (submitted is { Result: AnswerResult.Accepted, Count: { } count })
+        {
+            await sessions.AnswerCountUpdatedAsync(count);
+            if (count.EveryoneAnswered)
+            {
+                runner.Wake(count.SessionId);
+            }
+        }
+        return new AnswerReply(submitted.Result);
     }
 }
 
 public sealed record SessionStartReply(IReadOnlyList<string> Problems);
+
+public sealed record AnswerReply(AnswerResult Result);
 
 /// <summary>Live updates sent from outside the hub, e.g. after a Participant joins over REST.</summary>
 public sealed class ParticipantNotifier(IHubContext<QuizHub> hub, QuizEngine engine)
@@ -100,4 +142,13 @@ public sealed class SessionNotifier(IHubContext<QuizHub> hub)
 {
     public Task QuestionStartedAsync(QuestionStarted question, CancellationToken cancellationToken = default) =>
         hub.Clients.Group(QuizHub.MasterclassGroup(question.MasterclassId)).SendAsync(QuizHub.QuestionStarted, question, cancellationToken);
+
+    public Task AnswerCountUpdatedAsync(AnswerCount count, CancellationToken cancellationToken = default) =>
+        hub.Clients.Group(QuizHub.MasterclassGroup(count.MasterclassId)).SendAsync(QuizHub.AnswerCountUpdated, count, cancellationToken);
+
+    public Task QuestionRevealedAsync(QuestionRevealed revealed, CancellationToken cancellationToken = default) =>
+        hub.Clients.Group(QuizHub.MasterclassGroup(revealed.MasterclassId)).SendAsync(QuizHub.QuestionRevealed, revealed, cancellationToken);
+
+    public Task SessionEndedAsync(SessionEnded ended, CancellationToken cancellationToken = default) =>
+        hub.Clients.Group(QuizHub.MasterclassGroup(ended.MasterclassId)).SendAsync(QuizHub.SessionEnded, ended, cancellationToken);
 }
