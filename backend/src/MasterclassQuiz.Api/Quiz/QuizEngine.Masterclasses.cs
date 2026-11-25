@@ -79,6 +79,4 @@ public sealed partial class QuizEngine
             Id, Name, CourseId, CourseTitle, (MasterclassStatus)Status, JoinCode, Participants,
             Utc(CreatedAt), OpenedAt is { } opened ? Utc(opened) : null, ClosedAt is { } closed ? Utc(closed) : null);
     }
-
-    private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 }

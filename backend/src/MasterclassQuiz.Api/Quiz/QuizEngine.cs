@@ -17,7 +17,7 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
     public async Task<DatabaseHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         var checkedAt = await QuerySingleAsync<DateTime>("dbo.CheckHealth", WithNow(new DynamicParameters()), cancellationToken);
-        return new DatabaseHealth(DateTime.SpecifyKind(checkedAt, DateTimeKind.Utc));
+        return new DatabaseHealth(Utc(checkedAt));
     }
 
     /// <summary>
@@ -110,6 +110,9 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
         parameters.Add("Now", timeProvider.GetUtcNow().UtcDateTime, DbType.DateTime2);
         return parameters;
     }
+
+    // Procedures store and return UTC datetime2 values, which Dapper reads with an unspecified kind.
+    private static DateTime Utc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 }
 
 /// <summary>Proof that the engine reached the database; the time is the engine's <c>@Now</c>.</summary>
