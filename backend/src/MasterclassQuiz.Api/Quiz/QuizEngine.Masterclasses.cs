@@ -51,6 +51,28 @@ public sealed partial class QuizEngine
         return await GetMasterclassAsync(masterclassId, cancellationToken);
     }
 
+    /// <summary>
+    /// Closes an Open Masterclass when the meeting ends: no more joining or Sessions, and its Join code is
+    /// free for other Open Masterclasses; Recaps stay readable. A Draft can't be closed, nor an Open one while
+    /// a Session runs. Closing a Closed one again changes nothing. <see cref="MasterclassCloseResult.Masterclass"/>
+    /// is the Masterclass as it now is (null if there is none).
+    /// </summary>
+    public async Task<MasterclassCloseResult> CloseMasterclassAsync(int masterclassId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("MasterclassId", masterclassId);
+        List<string> problems;
+        await using (var connection = new SqlConnection(database.ConnectionString))
+        {
+            problems = (await connection.QueryAsync<string>(new CommandDefinition(
+                "dbo.CloseMasterclass",
+                WithNow(parameters),
+                commandType: CommandType.StoredProcedure,
+                cancellationToken: cancellationToken))).ToList();
+        }
+        return new MasterclassCloseResult(await GetMasterclassAsync(masterclassId, cancellationToken), problems);
+    }
+
     /// <summary>Every Masterclass, newest first.</summary>
     public async Task<IReadOnlyList<MasterclassOverview>> ListMasterclassesAsync(CancellationToken cancellationToken = default) =>
         await QueryMasterclassesAsync(null, cancellationToken);
