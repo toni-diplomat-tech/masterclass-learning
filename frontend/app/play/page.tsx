@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { currentParticipant } from "@/lib/participant";
+import { LivePlayer } from "./live-player";
 
 export const metadata: Metadata = { title: "Play · Masterclass Quiz" };
 
@@ -15,7 +16,7 @@ export default function PlayPage() {
   );
 }
 
-// The phone follows the server. For now the only state is the waiting screen; Sessions come later.
+// The phone follows the server (LivePlayer): waiting screen, then each Question as it starts.
 async function Player() {
   const participant = await currentParticipant();
   if (!participant) redirect("/");
@@ -30,7 +31,7 @@ async function Player() {
       {participant.masterclassStatus === "Closed" ? (
         <p>This Masterclass has ended.</p>
       ) : (
-        <p data-testid="waiting">Waiting for the Host to start the next Session…</p>
+        <LivePlayer masterclassId={participant.masterclassId} />
       )}
     </>
   );
