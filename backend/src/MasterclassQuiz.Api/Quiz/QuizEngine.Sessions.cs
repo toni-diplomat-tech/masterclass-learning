@@ -15,7 +15,7 @@ public sealed partial class QuizEngine
     /// </summary>
     public async Task<SessionStartResult> StartSessionAsync(int masterclassId, int workshopId, DifficultyCounts mix, CancellationToken cancellationToken = default)
     {
-        var limits = (settings ?? new QuizSettings()).TimeLimitSeconds;
+        var limits = Settings.TimeLimitSeconds;
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
         parameters.Add("WorkshopId", workshopId);
@@ -59,6 +59,73 @@ public sealed partial class QuizEngine
         var parameters = new DynamicParameters();
         parameters.Add("SessionId", sessionId);
         return ProcedureJson.Read<QuestionStarted>(await QueryJsonAsync("dbo.GetStartedQuestion", parameters, cancellationToken));
+    }
+
+    /// <summary>
+    /// Reveals the Session's running Question if it is due: its deadline plus 500 ms grace has passed, or
+    /// every Participant who was in the Masterclass when it started has answered. Those without an Answer
+    /// are recorded as Timed out. Returns what was revealed; null if nothing was (not due, or no Question
+    /// running), so only one caller ever gets a given reveal.
+    /// </summary>
+    public async Task<QuestionRevealed?> RevealQuestionAsync(int sessionId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("SessionId", sessionId);
+        bool revealed;
+        await using (var connection = new SqlConnection(database.ConnectionString))
+        {
+            revealed = await connection.QuerySingleAsync<bool>(new CommandDefinition(
+                "dbo.RevealQuestion",
+                WithNow(parameters),
+                commandType: CommandType.StoredProcedure,
+                cancellationToken: cancellationToken));
+        }
+        return revealed ? await GetRevealedQuestionAsync(sessionId, cancellationToken) : null;
+    }
+
+    /// <summary>The Session's most recently revealed Question with its correct option and counts; null if none.</summary>
+    public async Task<QuestionRevealed?> GetRevealedQuestionAsync(int sessionId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("SessionId", sessionId);
+        return ProcedureJson.Read<QuestionRevealed>(await QueryJsonAsync("dbo.GetRevealedQuestion", parameters, cancellationToken));
+    }
+
+    /// <summary>
+    /// Moves the Session on once the reveal pause (configuration) after its last reveal has passed: starts
+    /// the next Question, or ends the Session after its last one. Does nothing (both results null) while a
+    /// Question is running or the pause lasts, or once the Session has ended.
+    /// </summary>
+    public async Task<SessionAdvance> AdvanceSessionAsync(int sessionId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("SessionId", sessionId);
+        parameters.Add("RevealPauseMs", Settings.RevealPauseMilliseconds);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        parameters.Add("Now", now, DbType.DateTime2);
+        AdvanceRow row;
+        await using (var connection = new SqlConnection(database.ConnectionString))
+        {
+            row = await connection.QuerySingleAsync<AdvanceRow>(new CommandDefinition(
+                "dbo.AdvanceSession",
+                parameters,
+                commandType: CommandType.StoredProcedure,
+                cancellationToken: cancellationToken));
+        }
+        return row.Advanced switch
+        {
+            "Started" => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
+            "Ended" => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, now)),
+            _ => new SessionAdvance(null, null),
+        };
+    }
+
+    private QuizSettings Settings => settings ?? new QuizSettings();
+
+    private sealed class AdvanceRow
+    {
+        public string? Advanced { get; init; }
+        public int? MasterclassId { get; init; }
     }
 
     private sealed class SessionQuestionRow

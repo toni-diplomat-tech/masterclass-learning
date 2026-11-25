@@ -39,6 +39,39 @@ public sealed record QuestionStarted(
 public sealed record QuestionOption(int Position, string Text);
 
 /// <summary>
+/// A revealed Question (the <c>QuestionRevealed</c> message): the Question as it ran, its correct option,
+/// how many Participants chose each option, how many answered and how many were Timed out.
+/// <see cref="LastQuestion"/>: no Question of the Session follows, so the Session ends after the pause.
+/// </summary>
+public sealed record QuestionRevealed(
+    int MasterclassId,
+    int SessionId,
+    string WorkshopTitle,
+    int QuestionId,
+    int Number,
+    int QuestionCount,
+    Difficulty Difficulty,
+    string Text,
+    int CorrectOption,
+    IReadOnlyList<RevealedOption> Options,
+    int Answered,
+    int TimedOut,
+    DateTime RevealedAt,
+    bool LastQuestion);
+
+/// <summary>An option of a revealed Question and how many Participants chose it.</summary>
+public sealed record RevealedOption(int Position, string Text, int Answers);
+
+/// <summary>A Session that has ended (the <c>SessionEnded</c> message), at the server's UTC time.</summary>
+public sealed record SessionEnded(int MasterclassId, int SessionId, DateTime EndedAt);
+
+/// <summary>
+/// What <see cref="QuizEngine.AdvanceSessionAsync"/> did: started the next Question, ended the Session,
+/// or nothing (both null) because a Question is running, the reveal pause lasts, or the Session ended earlier.
+/// </summary>
+public sealed record SessionAdvance(QuestionStarted? Started, SessionEnded? Ended);
+
+/// <summary>
 /// The Quiz settings from configuration (section <see cref="SectionName"/>). Defaults are the spec's.
 /// </summary>
 public sealed class QuizSettings
@@ -47,6 +80,11 @@ public sealed class QuizSettings
 
     /// <summary>Time to answer a Question, in seconds, per Difficulty.</summary>
     public TimeLimitSeconds TimeLimitSeconds { get; init; } = new();
+
+    /// <summary>How long a revealed Question stays up before the next one starts (or the Session ends).</summary>
+    public double RevealPauseSeconds { get; init; } = 5;
+
+    public int RevealPauseMilliseconds => (int)Math.Round(1000 * RevealPauseSeconds);
 }
 
 public sealed class TimeLimitSeconds
