@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using MasterclassQuiz.Api.Courses;
 using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.HostAuth;
+using MasterclassQuiz.Api.Masterclasses;
 using MasterclassQuiz.Api.Quiz;
 
 // `hash-host-password`: read a password from stdin and print the value for HOST_PASSWORD_HASH.
@@ -56,7 +57,7 @@ app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, Cancell
     }
 });
 
-app.MapHostApi().MapCourseEndpoints();
+app.MapHostApi().MapCourseEndpoints().MapMasterclassEndpoints();
 
 app.Run();
 return 0;
