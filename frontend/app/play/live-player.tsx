@@ -49,6 +49,8 @@ export function LivePlayer({ masterclassId, recapToken }: { masterclassId: numbe
         // On every (re)connect: the server says where the Session is and what this phone answered.
         const state = await getCurrentState(connection, masterclassId);
         if (!state) return;
+        // Closed while this phone was away: the page renders again as "ended", with the Recap link.
+        if (state.masterclassStatus === "Closed") router.refresh();
         setParticipantId(state.participant?.participantId ?? null);
         setLeaderboard((shown) => newerLeaderboard(shown, state.leaderboard));
         setSession((shown) => newerSession(shown, state));

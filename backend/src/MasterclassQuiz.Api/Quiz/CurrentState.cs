@@ -13,10 +13,12 @@ namespace MasterclassQuiz.Api.Quiz;
 /// </list>
 /// <see cref="Leaderboard"/> is the Session leaderboard while <see cref="LiveStep.Revealed"/> or
 /// <see cref="LiveStep.Ended"/> (null otherwise). <see cref="Participant"/> is set only when asked for by a
-/// Participant of this Masterclass.
+/// Participant of this Masterclass. <see cref="MasterclassStatus"/> is Closed once the Host has closed the
+/// Masterclass, for a screen that missed the <c>MasterclassClosed</c> broadcast.
 /// </summary>
 public sealed record CurrentState(
     int MasterclassId,
+    MasterclassStatus MasterclassStatus,
     LiveStep Step,
     QuestionStarted? Question,
     AnswerCount? Count,

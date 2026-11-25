@@ -14,7 +14,7 @@ public sealed partial class QuizEngine
     /// What the Masterclass's screens should show now: waiting, the running Question (never its correct
     /// option) with its answer count, the latest revealed Question, or the end of the latest Session. With
     /// the token of a Participant of this Masterclass, also their own Answer to the Question shown (its
-    /// outcome only once revealed). Null if there is no such Masterclass.
+    /// outcome only once revealed), and whether the Masterclass is Closed. Null if there is no such Masterclass.
     /// </summary>
     public async Task<CurrentState?> GetCurrentStateAsync(int masterclassId, string? participantToken, CancellationToken cancellationToken = default)
     {
@@ -104,12 +104,13 @@ public sealed partial class QuizEngine
                     : null,
                 leaderboard?.Entries.SingleOrDefault(entry => entry.ParticipantId == participantId))
             : null;
-        return new CurrentState(row.MasterclassId, step, question, count, revealed, ended, participant, leaderboard);
+        return new CurrentState(row.MasterclassId, (MasterclassStatus)row.MasterclassStatus, step, question, count, revealed, ended, participant, leaderboard);
     }
 
     private sealed class CurrentStateRow
     {
         public int MasterclassId { get; init; }
+        public int MasterclassStatus { get; init; }
         public int? SessionId { get; init; }
         public string Step { get; init; } = "";
         public DateTime? EndedAt { get; init; }

@@ -201,6 +201,23 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_closed_masterclass_says_so_to_screens_that_missed_the_close()
+    {
+        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        await Engine.RevealQuestionAsync(meeting.SessionId);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        await Engine.AdvanceSessionAsync(meeting.SessionId);
+        var whileOpen = await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0]);
+
+        Assert.True((await Engine.CloseMasterclassAsync(meeting.MasterclassId)).Succeeded);
+        var afterClose = await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0]);
+
+        Assert.Equal(MasterclassStatus.Open, whileOpen!.MasterclassStatus);
+        Assert.Equal((MasterclassStatus.Closed, LiveStep.Ended), (afterClose!.MasterclassStatus, afterClose.Step));
+    }
+
+    [Fact]
     public async Task Running_sessions_are_listed_until_they_end()
     {
         var running = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);

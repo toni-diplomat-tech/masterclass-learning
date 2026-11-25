@@ -1,5 +1,6 @@
 import type { HubConnection } from "@microsoft/signalr";
 import type { LeaderboardEntry, SessionLeaderboard } from "@/lib/leaderboard";
+import type { MasterclassStatus } from "@/lib/masterclasses";
 import type { AnswerCount, LiveSession, QuestionRevealed, QuestionStarted, SessionEnded } from "@/lib/live";
 
 // Browser-side: GetCurrentState, called on every connect and reconnect (SignalR doesn't replay missed
@@ -14,12 +15,14 @@ export type AnswerOutcome = "Correct" | "Incorrect" | "TimedOut";
 export type OwnAnswer = { questionId: number; canAnswer: boolean; option: number | null; outcome: AnswerOutcome | null };
 
 /**
- * What to show now. Only the part named by `step` is set; `leaderboard` (the Session leaderboard) with
+ * What to show now. `masterclassStatus` is "Closed" once the Host closed the Masterclass, so a screen
+ * that missed the MasterclassClosed broadcast still moves on to its end. Only the part named by `step` is set; `leaderboard` (the Session leaderboard) with
  * Revealed and Ended; `participant` only for a Participant's phone, with their own leaderboard entry
  * (`standing`, null before they scored on a revealed Question).
  */
 export type CurrentState = {
   masterclassId: number;
+  masterclassStatus: MasterclassStatus;
   step: "Waiting" | "Question" | "Revealed" | "Ended";
   question: QuestionStarted | null;
   count: AnswerCount | null;
