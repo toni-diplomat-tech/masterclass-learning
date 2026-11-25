@@ -1,6 +1,5 @@
 using System.Data;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
@@ -19,12 +18,7 @@ public sealed partial class QuizEngine
         parameters.Add("Token", participantToken, DbType.AnsiString, size: 200);
         parameters.Add("QuestionId", questionId);
         parameters.Add("OptionPosition", optionPosition);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        var row = await connection.QuerySingleAsync<AnswerRow>(new CommandDefinition(
-            "dbo.SubmitAnswer",
-            WithNow(parameters),
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        var row = await QuerySingleAsync<AnswerRow>("dbo.SubmitAnswer", WithNow(parameters), cancellationToken);
         return new AnswerSubmission(
             Enum.Parse<AnswerResult>(row.Result),
             row.SessionId is { } sessionId

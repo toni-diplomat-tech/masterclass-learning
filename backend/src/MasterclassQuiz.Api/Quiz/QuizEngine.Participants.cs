@@ -1,7 +1,6 @@
 using System.Data;
 using System.Security.Cryptography;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
@@ -20,12 +19,7 @@ public sealed partial class QuizEngine
         parameters.Add("JoinCode", joinCode, DbType.String, size: 50);
         parameters.Add("CurrentToken", currentToken, DbType.AnsiString, size: 200);
         parameters.Add("NewToken", NewParticipantToken(), DbType.AnsiString, size: 200);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        var row = await connection.QuerySingleOrDefaultAsync<ParticipantRow>(new CommandDefinition(
-            "dbo.JoinMasterclass",
-            WithNow(WithSeed(parameters)),
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        var row = await QuerySingleOrDefaultAsync<ParticipantRow>("dbo.JoinMasterclass", WithNow(WithSeed(parameters)), cancellationToken);
         return row is null ? null : new ParticipantJoin(row.ToParticipant(), row.Token!);
     }
 
@@ -34,12 +28,7 @@ public sealed partial class QuizEngine
     {
         var parameters = new DynamicParameters();
         parameters.Add("Token", token, DbType.AnsiString, size: 200);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        var row = await connection.QuerySingleOrDefaultAsync<ParticipantRow>(new CommandDefinition(
-            "dbo.GetParticipant",
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        var row = await QuerySingleOrDefaultAsync<ParticipantRow>("dbo.GetParticipant", parameters, cancellationToken);
         return row?.ToParticipant();
     }
 

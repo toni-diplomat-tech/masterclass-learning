@@ -16,12 +16,7 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
 {
     public async Task<DatabaseHealth> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(database.ConnectionString);
-        var checkedAt = await connection.QuerySingleAsync<DateTime>(new CommandDefinition(
-            "dbo.CheckHealth",
-            WithNow(new DynamicParameters()),
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        var checkedAt = await QuerySingleAsync<DateTime>("dbo.CheckHealth", WithNow(new DynamicParameters()), cancellationToken);
         return new DatabaseHealth(DateTime.SpecifyKind(checkedAt, DateTimeKind.Utc));
     }
 
@@ -38,21 +33,11 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
             return CourseImportResult.Rejected(problem!);
         }
 
-        await using var connection = new SqlConnection(database.ConnectionString);
         var parameters = new DynamicParameters();
         parameters.Add("File", json, DbType.String, size: -1);
-        await using var results = await connection.QueryMultipleAsync(new CommandDefinition(
-            "dbo.ImportCourse",
-            WithNow(parameters),
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
-
-        var problems = (await results.ReadAsync<string>()).ToList();
-        if (problems.Count > 0)
-        {
-            return CourseImportResult.Rejected(problems);
-        }
-        return new CourseImportResult(await results.ReadSingleAsync<CourseImportOutcome>(), []);
+        var (problems, outcome) = await QueryUnlessProblemsAsync(
+            "dbo.ImportCourse", WithNow(parameters), results => results.ReadSingleAsync<CourseImportOutcome>(), cancellationToken);
+        return problems.Count > 0 ? CourseImportResult.Rejected(problems) : new CourseImportResult(outcome, []);
     }
 
     /// <summary>Every Course with its current Workshops in order and their Question counts per Difficulty.</summary>
@@ -70,16 +55,49 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
         return ProcedureJson.Read<CourseDetail>(await QueryJsonAsync("dbo.GetCourse", parameters, cancellationToken));
     }
 
+    // Calling procedures: each call opens its own connection (pooled) and runs one stored procedure.
+
     // For procedures that return one nvarchar(max) built with FOR JSON (null when there is nothing).
-    private async Task<string?> QueryJsonAsync(string procedure, DynamicParameters parameters, CancellationToken cancellationToken)
+    private Task<string?> QueryJsonAsync(string procedure, DynamicParameters parameters, CancellationToken cancellationToken) =>
+        QuerySingleAsync<string?>(procedure, parameters, cancellationToken);
+
+    private async Task<T> QuerySingleAsync<T>(string procedure, DynamicParameters parameters, CancellationToken cancellationToken)
     {
         await using var connection = new SqlConnection(database.ConnectionString);
-        return await connection.QuerySingleAsync<string?>(new CommandDefinition(
-            procedure,
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        return await connection.QuerySingleAsync<T>(Procedure(procedure, parameters, cancellationToken));
     }
+
+    private async Task<T?> QuerySingleOrDefaultAsync<T>(string procedure, DynamicParameters parameters, CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(database.ConnectionString);
+        return await connection.QuerySingleOrDefaultAsync<T>(Procedure(procedure, parameters, cancellationToken));
+    }
+
+    private async Task<List<T>> QueryListAsync<T>(string procedure, DynamicParameters parameters, CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(database.ConnectionString);
+        return (await connection.QueryAsync<T>(Procedure(procedure, parameters, cancellationToken))).ToList();
+    }
+
+    private async Task ExecuteAsync(string procedure, DynamicParameters parameters, CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(database.ConnectionString);
+        await connection.ExecuteAsync(Procedure(procedure, parameters, cancellationToken));
+    }
+
+    // For procedures whose first result set lists every problem (one string each) and that return
+    // nothing else when there is one; otherwise <paramref name="read"/> reads the result sets that follow.
+    private async Task<(List<string> Problems, T? Value)> QueryUnlessProblemsAsync<T>(
+        string procedure, DynamicParameters parameters, Func<SqlMapper.GridReader, Task<T>> read, CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(database.ConnectionString);
+        await using var results = await connection.QueryMultipleAsync(Procedure(procedure, parameters, cancellationToken));
+        var problems = (await results.ReadAsync<string>()).ToList();
+        return problems.Count > 0 ? (problems, default) : (problems, await read(results));
+    }
+
+    private static CommandDefinition Procedure(string procedure, DynamicParameters parameters, CancellationToken cancellationToken) =>
+        new(procedure, parameters, commandType: CommandType.StoredProcedure, cancellationToken: cancellationToken);
 
     private DynamicParameters WithSeed(DynamicParameters parameters)
     {

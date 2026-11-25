@@ -1,6 +1,5 @@
 using System.Data;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
@@ -14,22 +13,11 @@ public sealed partial class QuizEngine
         parameters.Add("CourseId", courseId);
         parameters.Add("Name", name, DbType.String, size: -1);
 
-        int id;
-        await using (var connection = new SqlConnection(database.ConnectionString))
-        {
-            await using var results = await connection.QueryMultipleAsync(new CommandDefinition(
-                "dbo.CreateMasterclass",
-                WithNow(parameters),
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken));
-            var problems = (await results.ReadAsync<string>()).ToList();
-            if (problems.Count > 0)
-            {
-                return new MasterclassCreateResult(null, problems);
-            }
-            id = await results.ReadSingleAsync<int>();
-        }
-        return new MasterclassCreateResult(await GetMasterclassAsync(id, cancellationToken), []);
+        var (problems, id) = await QueryUnlessProblemsAsync(
+            "dbo.CreateMasterclass", WithNow(parameters), results => results.ReadSingleAsync<int>(), cancellationToken);
+        return problems.Count > 0
+            ? new MasterclassCreateResult(null, problems)
+            : new MasterclassCreateResult(await GetMasterclassAsync(id, cancellationToken), []);
     }
 
     /// <summary>
@@ -40,14 +28,7 @@ public sealed partial class QuizEngine
     {
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
-        await using (var connection = new SqlConnection(database.ConnectionString))
-        {
-            await connection.ExecuteAsync(new CommandDefinition(
-                "dbo.OpenMasterclass",
-                WithNow(WithSeed(parameters)),
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken));
-        }
+        await ExecuteAsync("dbo.OpenMasterclass", WithNow(WithSeed(parameters)), cancellationToken);
         return await GetMasterclassAsync(masterclassId, cancellationToken);
     }
 
@@ -61,15 +42,7 @@ public sealed partial class QuizEngine
     {
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
-        List<string> problems;
-        await using (var connection = new SqlConnection(database.ConnectionString))
-        {
-            problems = (await connection.QueryAsync<string>(new CommandDefinition(
-                "dbo.CloseMasterclass",
-                WithNow(parameters),
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken))).ToList();
-        }
+        var problems = await QueryListAsync<string>("dbo.CloseMasterclass", WithNow(parameters), cancellationToken);
         return new MasterclassCloseResult(await GetMasterclassAsync(masterclassId, cancellationToken), problems);
     }
 
@@ -85,12 +58,7 @@ public sealed partial class QuizEngine
     {
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        var rows = await connection.QueryAsync<MasterclassRow>(new CommandDefinition(
-            "dbo.ListMasterclasses",
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        var rows = await QueryListAsync<MasterclassRow>("dbo.ListMasterclasses", parameters, cancellationToken);
         return rows.Select(row => row.ToOverview()).ToList();
     }
 

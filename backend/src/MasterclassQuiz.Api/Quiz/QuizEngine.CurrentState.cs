@@ -1,6 +1,5 @@
 using System.Data;
 using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
@@ -41,25 +40,15 @@ public sealed partial class QuizEngine
     {
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        return (await connection.QueryAsync<int>(new CommandDefinition(
-            "dbo.ListRunningSessions",
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken))).ToList();
+        return await QueryListAsync<int>("dbo.ListRunningSessions", parameters, cancellationToken);
     }
 
-    private async Task<CurrentStateRow?> ReadCurrentStateAsync(int masterclassId, string? participantToken, CancellationToken cancellationToken)
+    private Task<CurrentStateRow?> ReadCurrentStateAsync(int masterclassId, string? participantToken, CancellationToken cancellationToken)
     {
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
         parameters.Add("Token", participantToken, DbType.AnsiString, size: 200);
-        await using var connection = new SqlConnection(database.ConnectionString);
-        return await connection.QuerySingleOrDefaultAsync<CurrentStateRow>(new CommandDefinition(
-            "dbo.GetCurrentState",
-            parameters,
-            commandType: CommandType.StoredProcedure,
-            cancellationToken: cancellationToken));
+        return QuerySingleOrDefaultAsync<CurrentStateRow>("dbo.GetCurrentState", parameters, cancellationToken);
     }
 
     // Null when the Question read is not the one the row is about (the Session moved on meanwhile).
