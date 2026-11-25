@@ -35,6 +35,14 @@ async function Projector({ params }: { params: Promise<{ id: string }> }) {
     <>
       <p style={{ textAlign: "left" }}>
         <Link href="/host">← Back office</Link>
+        {masterclass.status !== "Draft" && (
+          <>
+            {" · "}
+            <Link href={`/host/masterclass/${masterclass.id}/results`} data-testid="results-link">
+              Results
+            </Link>
+          </>
+        )}
       </p>
       <h1>{masterclass.name}</h1>
       <p>{masterclass.courseTitle}</p>
