@@ -3,6 +3,8 @@
 --   they ran: Correct, Incorrect and Timed out counts and percentCorrect = Correct / all three, rounded to
 --   a whole percent (null when nobody was there to answer). A running Question appears once revealed, so
 --   its counts are never partial.
+-- participants: every Participant of the Masterclass by Nickname (also those with no Answer), with their
+--   points over all revealed Questions and their Recap token, so the Host can open any Recap.
 -- No status filter: the results read the same for Open and Closed Masterclasses.
 CREATE OR ALTER PROCEDURE dbo.GetMasterclassResults
     @MasterclassId int
@@ -48,7 +50,19 @@ BEGIN
                 WHERE s.MasterclassId = m.Id
                 ORDER BY w.Number
                 FOR JSON PATH), N'[]')) AS sessions,
-            JSON_QUERY(N'[]') AS participants
+            JSON_QUERY(ISNULL((
+                SELECT
+                    p.Id AS participantId,
+                    p.Nickname AS nickname,
+                    (SELECT ISNULL(SUM(a.Points), 0)
+                     FROM dbo.Answers a
+                     JOIN dbo.SessionQuestions sq ON sq.Id = a.SessionQuestionId
+                     WHERE a.ParticipantId = p.Id AND sq.RevealedAt IS NOT NULL) AS points,
+                    p.RecapToken AS recapToken
+                FROM dbo.Participants p
+                WHERE p.MasterclassId = m.Id
+                ORDER BY p.Nickname
+                FOR JSON PATH), N'[]')) AS participants
         FROM dbo.Masterclasses m
         JOIN dbo.Courses c ON c.Id = m.CourseId
         WHERE m.Id = @MasterclassId

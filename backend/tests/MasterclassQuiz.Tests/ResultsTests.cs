@@ -68,6 +68,34 @@ public sealed class ResultsTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task Every_participant_is_listed_by_nickname_with_their_points_over_all_sessions_and_their_recap_token()
+    {
+        var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(2, 0, 0));
+        var (allRight, oneRight) = (await meeting.JoinAsync(), await meeting.JoinAsync());
+        var unitTests = await meeting.StartSessionAsync("unit-tests");
+        await meeting.FinishSessionAsync(unitTests, new()
+        {
+            [allRight] = _ => 1,
+            [oneRight] = id => id == unitTests.Questions[0].StableId ? 1 : 2,
+        });
+        var late = await meeting.JoinAsync();
+        var doubles = await meeting.StartSessionAsync("test-doubles");
+        await meeting.FinishSessionAsync(doubles, new() { [allRight] = _ => 1 });
+
+        var participants = (await Engine.GetMasterclassResultsAsync(meeting.MasterclassId))!.Participants;
+
+        // Answered at once, every Correct Easy Answer scores the full 500 points.
+        var expected = new[] { (allRight, 500 * (2 + doubles.Questions.Count)), (oneRight, 500), (late, 0) };
+        var rows = new List<ParticipantResult>();
+        foreach (var (token, points) in expected)
+        {
+            var participant = (await Engine.GetParticipantAsync(token))!;
+            rows.Add(new ParticipantResult(participant.Id, participant.Nickname, points, (await Engine.GetRecapTokenAsync(token))!));
+        }
+        Assert.Equal(rows.OrderBy(r => r.Nickname, StringComparer.OrdinalIgnoreCase), participants);
+    }
+
+    [Fact]
     public async Task A_masterclass_without_sessions_has_no_results_yet_and_an_unknown_one_has_none()
     {
         var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(1, 0, 0));
