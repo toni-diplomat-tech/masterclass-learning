@@ -24,6 +24,7 @@ public sealed class HostLoginTests(SqlServerFixture sqlServer) : IDisposable
         var cookie = Assert.Single(login.Headers.GetValues("Set-Cookie"));
         Assert.StartsWith($"{HostSession.CookieName}=", cookie);
         Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("expires=", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(HttpStatusCode.OK, session.StatusCode);
     }
 

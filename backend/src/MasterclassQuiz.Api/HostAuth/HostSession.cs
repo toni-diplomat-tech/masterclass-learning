@@ -67,7 +67,8 @@ public static class HostSession
             }
 
             var identity = new ClaimsIdentity([new Claim(ClaimTypes.Role, "Host")], CookieAuthenticationDefaults.AuthenticationScheme);
-            await context.SignInAsync(new ClaimsPrincipal(identity));
+            // Persistent: survives a browser restart on the projector machine, until Lifetime runs out.
+            await context.SignInAsync(new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = true });
             return Results.NoContent();
         }).AllowAnonymous();
 
