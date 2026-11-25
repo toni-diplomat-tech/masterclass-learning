@@ -1,6 +1,6 @@
 # Course import file
 
-One import file describes one Course: its Workshops and Lessons, and its Questions. The Host uploads it at `/host`; the builder script in `/tools` produces it from a course folder and the Question files. Real import files live in the git-ignored `content/` folder. [`testing-fundamentals.json`](testing-fundamentals.json) is a complete example; the backend tests import it, so it is always valid.
+One import file describes one Course: its Workshops and Lessons, and its Questions. The Host uploads it at `/host`; the [builder script](../../tools/import-file-builder/README.md) produces it from a course folder and the Question files. Real import files live in the git-ignored `content/` folder. [`testing-fundamentals.json`](testing-fundamentals.json) is a complete example; the backend tests import it, so it is always valid, and the builder's tests produce it from a made-up course folder.
 
 The app stores only the structure and a URL per Lesson, never the Lesson text.
 
