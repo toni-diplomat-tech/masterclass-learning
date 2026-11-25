@@ -25,7 +25,7 @@ The Host logs in at `/host/login`. The backend checks the password against a has
 dotnet run --project backend/src/MasterclassQuiz.Api -- hash-host-password
 ```
 
-Without `HOST_PASSWORD_HASH` every login is refused.
+Without `HOST_PASSWORD_HASH` every login is refused. For the VPS, `deploy/wizard.sh` asks for the password and writes the hash to the server's `.env`.
 
 ## Test
 

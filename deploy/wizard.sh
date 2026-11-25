@@ -253,6 +253,23 @@ write_env MSSQL_SA_PASSWORD "$MSSQL_SA_PASSWORD"
 write_env COMPOSE_FILE "docker-compose.yml:docker-compose.prod.yml"
 warn "Keep this SA password: SQL Server stores it in its data volume on first start,"
 warn "so changing only .env later locks the backend out."
+say ""
+say "The Host logs in at https://$DOMAIN/host/login. Only a hash of that password goes into .env;"
+say "the hash is made here with the .NET SDK (dotnet must be installed)."
+HOST_PASSWORD_HASH=$(_existing HOST_PASSWORD_HASH || true)
+if [[ -z "$HOST_PASSWORD_HASH" ]] || confirm "Change the Host password?"; then
+  HOST_PASSWORD_HASH=""
+  until [[ "$HOST_PASSWORD_HASH" == pbkdf2-sha256.* ]]; do
+    HOST_PASSWORD=""
+    until [[ -n "$HOST_PASSWORD" ]]; do ask_secret HOST_PASSWORD "Host password:"; done
+    HOST_PASSWORD_HASH=$(printf '%s\n' "$HOST_PASSWORD" \
+      | dotnet run --project backend/src/MasterclassQuiz.Api --no-launch-profile -- hash-host-password 2>/dev/null \
+      | tail -n 1) || true
+    [[ "$HOST_PASSWORD_HASH" == pbkdf2-sha256.* ]] || warn "Couldn't hash the password (is dotnet installed?). Try again."
+  done
+  unset HOST_PASSWORD
+fi
+write_env HOST_PASSWORD_HASH "$HOST_PASSWORD_HASH"
 pause
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
