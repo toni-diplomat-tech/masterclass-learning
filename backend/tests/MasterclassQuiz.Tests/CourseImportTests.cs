@@ -108,6 +108,47 @@ public sealed class CourseImportTests(SqlServerFixture sqlServer)
         Assert.Equal(questionId, restored.Id);
     }
 
+    [Fact]
+    public async Task Courses_are_listed_with_their_workshops_and_current_question_counts_per_difficulty()
+    {
+        var file = ImportFiles.Example(ImportFiles.UniqueSlug());
+        file["course"]!["title"] = "Testing Fundamentals (list test)";
+        file.Question("unit-tests-002")["difficulty"] = "Easy";
+        await ImportAsync(file);
+        file["questions"]!.AsArray().Remove(file.Question("test-doubles-001"));
+        await ImportAsync(file);
+
+        var course = Assert.Single(await _engine.ListCoursesAsync(), c => c.Slug == Slug(file));
+
+        Assert.Equal("Testing Fundamentals (list test)", course.Title);
+        Assert.Equal(
+            [("unit-tests", "Unit tests", 1, new DifficultyCounts(2, 0, 1)), ("test-doubles", "Test doubles", 2, new DifficultyCounts(0, 0, 0))],
+            course.Workshops.Select(w => (w.Slug, w.Title, w.Number, w.Questions)));
+    }
+
+    [Fact]
+    public async Task Workshops_and_lessons_removed_from_the_file_drop_out_of_the_course_and_come_back_when_restored()
+    {
+        var file = ImportFiles.Example(ImportFiles.UniqueSlug());
+        await ImportAsync(file);
+        file["workshops"]!.AsArray().RemoveAt(1);
+        file["workshops"]![0]!["lessons"]!.AsArray().RemoveAt(0);
+        var questions = file["questions"]!.AsArray();
+        questions.Remove(file.Question("test-doubles-001"));
+        questions.Remove(file.Question("unit-tests-001"));
+
+        var removing = await ImportAsync(file);
+        var reduced = (await _engine.GetCourseAsync(Slug(file)))!;
+        await ImportAsync(ImportFiles.Example(Slug(file)));
+        var restored = (await _engine.GetCourseAsync(Slug(file)))!;
+
+        Assert.Equal(2, removing.Summary!.QuestionsRetired);
+        Assert.Equal(["unit-tests"], reduced.Workshops.Select(w => w.Slug));
+        Assert.Equal(["writing-your-first-test"], reduced.Workshops[0].Lessons.Select(l => l.Slug));
+        Assert.Equal(["unit-tests", "test-doubles"], restored.Workshops.Select(w => w.Slug));
+        Assert.Equal(["why-we-test", "writing-your-first-test"], restored.Workshops[0].Lessons.Select(l => l.Slug));
+    }
+
     private Task<CourseImportResult> ImportAsync(JsonObject file) => _engine.ImportCourseAsync(file.ToJsonString());
 
     private static string Slug(JsonObject file) => (string)file["course"]!["slug"]!;
