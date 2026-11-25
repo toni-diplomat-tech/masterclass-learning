@@ -5,6 +5,7 @@ import type { HubConnection } from "@microsoft/signalr";
 import { useRouter } from "next/navigation";
 import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
+import { getCurrentState, newerLeaderboard, newerSession, type OwnAnswer } from "@/lib/current-state";
 import { followSession, keepFollowing, submitAnswer, type AnswerResult, type LiveSession, type QuestionRevealed } from "@/lib/live";
 import { connectToQuizHub } from "@/lib/quiz-hub";
 import { followLeaderboard, leaderboardFor, type SessionLeaderboard } from "@/lib/leaderboard";
@@ -45,8 +46,14 @@ export function LivePlayer({ masterclassId, recapToken }: { masterclassId: numbe
     const stop = keepFollowing(
       connection,
       async () => {
-        const me = await connection.invoke<{ id: number } | null>("WatchAsParticipant");
-        setParticipantId(me?.id ?? null);
+        // On every (re)connect: the server says where the Session is and what this phone answered.
+        const state = await getCurrentState(connection, masterclassId);
+        if (!state) return;
+        setParticipantId(state.participant?.participantId ?? null);
+        setLeaderboard((shown) => newerLeaderboard(shown, state.leaderboard));
+        setSession((shown) => newerSession(shown, state));
+        const own = state.participant?.answer;
+        if (own) setAnswer((mine) => restoredAnswer(mine, own));
       },
       setConnected,
     );
@@ -82,6 +89,13 @@ export function LivePlayer({ masterclassId, recapToken }: { masterclassId: numbe
       {!connected && <small style={{ display: "block" }}>Connecting to live updates…</small>}
     </>
   );
+}
+
+// This phone's Answer as the server has it (e.g. after a reload), unless the phone knows more already.
+function restoredAnswer(mine: MyAnswer | null, own: OwnAnswer): MyAnswer | null {
+  if (own.option !== null) return { questionId: own.questionId, position: own.option, status: "locked", result: "Accepted" };
+  if (!own.canAnswer) return { questionId: own.questionId, position: 0, status: "refused", result: "JoinedAfterStart" };
+  return mine?.questionId === own.questionId ? mine : null;
 }
 
 function Screen({
