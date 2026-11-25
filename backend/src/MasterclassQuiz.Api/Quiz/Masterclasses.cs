@@ -30,6 +30,14 @@ public sealed record MasterclassCreateResult(MasterclassOverview? Masterclass, I
     public bool Succeeded => Problems.Count == 0;
 }
 
+/// <summary>
+/// The Masterclass after a close (null if there is none), and every reason it wasn't closed (empty: it is Closed).
+/// </summary>
+public sealed record MasterclassCloseResult(MasterclassOverview? Masterclass, IReadOnlyList<string> Problems)
+{
+    public bool Succeeded => Problems.Count == 0 && Masterclass is { Status: MasterclassStatus.Closed };
+}
+
 /// <summary>A person in a Masterclass, known by their assigned Nickname. <see cref="JoinedAt"/> is UTC.</summary>
 public sealed record Participant(
     int Id,

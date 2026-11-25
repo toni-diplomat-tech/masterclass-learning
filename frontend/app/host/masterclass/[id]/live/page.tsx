@@ -7,8 +7,10 @@ import { Suspense } from "react";
 import { openMasterclassAction } from "@/app/host/actions";
 import { listCourses } from "@/lib/courses";
 import { requireHost } from "@/lib/host-session";
-import { getMasterclass, type MasterclassOverview } from "@/lib/masterclasses";
+import { getMasterclass, getMasterclassLeaderboard, type MasterclassOverview } from "@/lib/masterclasses";
+import { CloseMasterclassForm } from "./close-masterclass-form";
 import { LiveMasterclass } from "./live-masterclass";
+import { MasterclassLeaderboardTable } from "./masterclass-leaderboard";
 
 export const metadata: Metadata = { title: "Projector · Masterclass Quiz" };
 
@@ -38,7 +40,18 @@ async function Projector({ params }: { params: Promise<{ id: string }> }) {
       <p>{masterclass.courseTitle}</p>
       {masterclass.status === "Draft" && <OpenMasterclass masterclass={masterclass} />}
       {masterclass.status === "Open" && <OpenProjector masterclass={masterclass} />}
-      {masterclass.status === "Closed" && <p>This Masterclass is closed.</p>}
+      {masterclass.status === "Closed" && <ClosedProjector masterclass={masterclass} />}
+    </>
+  );
+}
+
+// The end of the meeting: the Masterclass leaderboard over all Sessions.
+async function ClosedProjector({ masterclass }: { masterclass: MasterclassOverview }) {
+  const leaderboard = await getMasterclassLeaderboard(masterclass.id);
+  return (
+    <>
+      <p>This Masterclass is closed.</p>
+      {leaderboard && <MasterclassLeaderboardTable leaderboard={leaderboard} />}
     </>
   );
 }
@@ -60,6 +73,7 @@ async function OpenProjector({ masterclass }: { masterclass: MasterclassOverview
   return (
     <LiveMasterclass masterclassId={masterclass.id} initialParticipants={masterclass.participants} workshops={course?.workshops ?? []}>
       <JoinInvitation masterclass={masterclass} />
+      <CloseMasterclassForm masterclassId={masterclass.id} />
     </LiveMasterclass>
   );
 }

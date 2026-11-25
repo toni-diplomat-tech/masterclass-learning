@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
+import { useRouter } from "next/navigation";
 import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import { getCurrentState, newerLeaderboard, newerSession, type OwnAnswer } from "@/lib/current-state";
@@ -31,12 +32,17 @@ export function LivePlayer({ masterclassId, recapToken }: { masterclassId: numbe
   const [leaderboard, setLeaderboard] = useState<SessionLeaderboard | null>(null);
   const [participantId, setParticipantId] = useState<number | null>(null);
   const connectionRef = useRef<HubConnection | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const connection = connectToQuizHub();
     connectionRef.current = connection;
     followSession(connection, masterclassId, setSession);
     followLeaderboard(connection, masterclassId, setLeaderboard);
+    // Closed: the page renders again as "ended", with the Recap link.
+    connection.on("MasterclassClosed", (closed: { masterclassId: number }) => {
+      if (closed.masterclassId === masterclassId) router.refresh();
+    });
     const stop = keepFollowing(
       connection,
       async () => {
@@ -55,7 +61,7 @@ export function LivePlayer({ masterclassId, recapToken }: { masterclassId: numbe
       connectionRef.current = null;
       stop();
     };
-  }, [masterclassId]);
+  }, [masterclassId, router]);
 
   const choose = async (questionId: number, position: number) => {
     const connection = connectionRef.current;
