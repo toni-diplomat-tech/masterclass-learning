@@ -29,6 +29,7 @@ var database = new DatabaseConnection(
 
 builder.Services.AddSingleton(database);
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(QuizSettingsFrom(builder.Configuration));
 builder.Services.AddSingleton<QuizEngine>();
 builder.Services.AddHostSession();
 builder.Services.AddSignalR();
@@ -67,6 +68,20 @@ app.MapHub<QuizHub>(QuizHub.Path);
 
 app.Run();
 return 0;
+
+// The "Quiz" section of configuration (appsettings.json, or e.g. Quiz__TimeLimitSeconds__Easy=5).
+static QuizSettings QuizSettingsFrom(IConfiguration configuration)
+{
+    var settings = configuration.GetSection(QuizSettings.SectionName).Get<QuizSettings>() ?? new QuizSettings();
+    foreach (var difficulty in Enum.GetValues<Difficulty>())
+    {
+        if (settings.TimeLimitSeconds.MillisecondsFor(difficulty) <= 0)
+        {
+            throw new InvalidOperationException($"Quiz:TimeLimitSeconds:{difficulty} must be more than 0.");
+        }
+    }
+    return settings;
+}
 
 internal sealed record HealthResponse(HealthStatus Backend, HealthStatus Database, DateTime? DatabaseCheckedAtUtc);
 

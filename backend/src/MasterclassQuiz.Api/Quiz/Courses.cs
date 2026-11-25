@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace MasterclassQuiz.Api.Quiz;
 
+/// <summary>Stored as 1/2/3; JSON says "Easy"/"Medium"/"Hard" (and still reads the numbers).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<Difficulty>))]
 public enum Difficulty
 {
     Easy = 1,
