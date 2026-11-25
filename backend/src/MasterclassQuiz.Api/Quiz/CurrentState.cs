@@ -11,7 +11,9 @@ namespace MasterclassQuiz.Api.Quiz;
 /// <item><see cref="LiveStep.Revealed"/>: <see cref="Revealed"/> is the latest Question, revealed; the reveal pause runs.</item>
 /// <item><see cref="LiveStep.Ended"/>: the latest Session has <see cref="Ended"/>; the next one hasn't started.</item>
 /// </list>
-/// <see cref="Participant"/> is set only when asked for by a Participant of this Masterclass.
+/// <see cref="Leaderboard"/> is the Session leaderboard while <see cref="LiveStep.Revealed"/> or
+/// <see cref="LiveStep.Ended"/> (null otherwise). <see cref="Participant"/> is set only when asked for by a
+/// Participant of this Masterclass.
 /// </summary>
 public sealed record CurrentState(
     int MasterclassId,
@@ -20,7 +22,8 @@ public sealed record CurrentState(
     AnswerCount? Count,
     QuestionRevealed? Revealed,
     SessionEnded? Ended,
-    ParticipantState? Participant);
+    ParticipantState? Participant,
+    SessionLeaderboard? Leaderboard);
 
 [JsonConverter(typeof(JsonStringEnumConverter<LiveStep>))]
 public enum LiveStep
@@ -33,9 +36,10 @@ public enum LiveStep
 
 /// <summary>
 /// The asking Participant's own part of the <see cref="CurrentState"/>: their Answer to the Question shown
-/// (null while Waiting or once the Session ended).
+/// (null while Waiting or once the Session ended), and their <see cref="Standing"/> (points and rank) on
+/// the <see cref="CurrentState.Leaderboard"/> (null without one, or before they had an Answer revealed).
 /// </summary>
-public sealed record ParticipantState(int ParticipantId, string Nickname, OwnAnswer? Answer);
+public sealed record ParticipantState(int ParticipantId, string Nickname, OwnAnswer? Answer, LeaderboardEntry? Standing);
 
 /// <summary>
 /// A Participant's Answer to the Question shown. <see cref="CanAnswer"/> is false when they joined after it

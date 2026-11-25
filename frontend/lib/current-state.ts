@@ -1,4 +1,5 @@
 import type { HubConnection } from "@microsoft/signalr";
+import type { LeaderboardEntry, SessionLeaderboard } from "@/lib/leaderboard";
 import type { AnswerCount, LiveSession, QuestionRevealed, QuestionStarted, SessionEnded } from "@/lib/live";
 
 // Browser-side: GetCurrentState, called on every connect and reconnect (SignalR doesn't replay missed
@@ -12,7 +13,11 @@ export type AnswerOutcome = "Correct" | "Incorrect" | "TimedOut";
  */
 export type OwnAnswer = { questionId: number; canAnswer: boolean; option: number | null; outcome: AnswerOutcome | null };
 
-/** What to show now. Only the part named by `step` is set; `participant` only for a Participant's phone. */
+/**
+ * What to show now. Only the part named by `step` is set; `leaderboard` (the Session leaderboard) with
+ * Revealed and Ended; `participant` only for a Participant's phone, with their own leaderboard entry
+ * (`standing`, null before they scored on a revealed Question).
+ */
 export type CurrentState = {
   masterclassId: number;
   step: "Waiting" | "Question" | "Revealed" | "Ended";
@@ -20,7 +25,8 @@ export type CurrentState = {
   count: AnswerCount | null;
   revealed: QuestionRevealed | null;
   ended: SessionEnded | null;
-  participant: { participantId: number; nickname: string; answer: OwnAnswer | null } | null;
+  participant: { participantId: number; nickname: string; answer: OwnAnswer | null; standing: LeaderboardEntry | null } | null;
+  leaderboard: SessionLeaderboard | null;
 };
 
 /** Follows the Masterclass's broadcasts and returns what to show now; null if refused (not theirs). */
@@ -81,4 +87,15 @@ function compare(a: number[], b: number[]): number {
     if (difference !== 0) return difference;
   }
   return 0;
+}
+
+/**
+ * The state's leaderboard, unless the shown one is at least as recent: from a later Session, or the
+ * final one of the same Session. Keeps the shown one when the state has none.
+ */
+export function newerLeaderboard(shown: SessionLeaderboard | null, fromState: SessionLeaderboard | null): SessionLeaderboard | null {
+  if (!fromState) return shown;
+  if (!shown || shown.sessionId < fromState.sessionId) return fromState;
+  if (shown.sessionId > fromState.sessionId || (shown.ended && !fromState.ended)) return shown;
+  return fromState;
 }

@@ -76,7 +76,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
 
         var state = await Engine.GetCurrentStateAsync(meeting.MasterclassId, late.Token);
 
-        Assert.Equal(new ParticipantState(late.Participant.Id, late.Participant.Nickname, new OwnAnswer(meeting.Question.QuestionId, false, null, null)), state!.Participant);
+        Assert.Equal(new ParticipantState(late.Participant.Id, late.Participant.Nickname, new OwnAnswer(meeting.Question.QuestionId, false, null, null), Standing: null), state!.Participant);
     }
 
     [Fact]
@@ -115,6 +115,59 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
                 new OwnAnswer(meeting.Question.QuestionId, true, null, AnswerOutcome.TimedOut),
             ],
             states.Select(state => state.Participant!.Answer));
+    }
+
+    [Fact]
+    public async Task A_revealed_question_comes_back_with_the_session_leaderboard_and_each_participants_standing()
+    {
+        var meeting = await MeetingFixture.StartAsync(Engine, participants: 3, easy: 2);
+        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1); // at once: 500 points
+        await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 3);
+        _time.Advance(TimeSpan.FromMilliseconds(3_500));
+        await Engine.RevealQuestionAsync(meeting.SessionId);
+
+        var states = new List<CurrentState>();
+        foreach (var token in meeting.Tokens)
+        {
+            states.Add((await Engine.GetCurrentStateAsync(meeting.MasterclassId, token))!);
+        }
+        var projector = (await Engine.GetCurrentStateAsync(meeting.MasterclassId, participantToken: null))!;
+
+        Assert.Equal(Json(await Engine.GetSessionLeaderboardAsync(meeting.SessionId)), Json(projector.Leaderboard));
+        Assert.False(projector.Leaderboard!.Ended);
+        Assert.Equal(
+            [(1, 500, 500), (2, 0, 0), (2, 0, 0)],
+            states.Select(state => state.Participant!.Standing!).Select(entry => (entry.Rank, entry.Points, entry.QuestionPoints)));
+        Assert.Equal(states.Select(state => state.Participant!.ParticipantId), states.Select(state => state.Participant!.Standing!.ParticipantId));
+    }
+
+    [Fact]
+    public async Task A_running_question_comes_back_without_a_leaderboard()
+    {
+        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+
+        var state = (await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0]))!;
+
+        Assert.Equal((LiveStep.Question, null, null), (state.Step, state.Leaderboard, state.Participant!.Standing));
+    }
+
+    [Fact]
+    public async Task Session_over_comes_back_with_the_final_leaderboard_and_the_participants_rank()
+    {
+        var meeting = await MeetingFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 1);
+        _time.Advance(TimeSpan.FromMilliseconds(3_500));
+        await Engine.RevealQuestionAsync(meeting.SessionId);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        await Engine.AdvanceSessionAsync(meeting.SessionId);
+
+        var first = (await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0]))!;
+        var second = (await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[1]))!;
+
+        Assert.Equal((LiveStep.Ended, true), (first.Step, first.Leaderboard!.Ended));
+        Assert.Equal((2, 0), (first.Participant!.Standing!.Rank, first.Participant.Standing.Points));
+        Assert.Equal((1, 500), (second.Participant!.Standing!.Rank, second.Participant.Standing.Points));
     }
 
     [Fact]

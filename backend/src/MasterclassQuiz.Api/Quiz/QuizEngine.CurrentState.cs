@@ -92,15 +92,19 @@ public sealed partial class QuizEngine
                 break;
         }
 
+        var leaderboard = step is LiveStep.Revealed or LiveStep.Ended
+            ? await GetSessionLeaderboardAsync(row.SessionId!.Value, cancellationToken)
+            : null;
         var participant = row.ParticipantId is { } participantId
             ? new ParticipantState(
                 participantId,
                 row.Nickname!,
                 step is LiveStep.Question or LiveStep.Revealed
                     ? new OwnAnswer(row.QuestionId!.Value, row.CanAnswer, row.OptionPosition, (AnswerOutcome?)row.Outcome)
-                    : null)
+                    : null,
+                leaderboard?.Entries.SingleOrDefault(entry => entry.ParticipantId == participantId))
             : null;
-        return new CurrentState(row.MasterclassId, step, question, count, revealed, ended, participant);
+        return new CurrentState(row.MasterclassId, step, question, count, revealed, ended, participant, leaderboard);
     }
 
     private sealed class CurrentStateRow

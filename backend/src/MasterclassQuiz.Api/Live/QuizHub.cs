@@ -37,6 +37,12 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
     /// <summary>Server → clients: a <see cref="Quiz.SessionEnded"/> after the pause following the last reveal.</summary>
     public const string SessionEnded = nameof(SessionEnded);
 
+    /// <summary>
+    /// Server → clients: a <see cref="Quiz.SessionLeaderboard"/> after each reveal, and once more (final, with
+    /// <c>ended</c> true) when the Session ends.
+    /// </summary>
+    public const string LeaderboardUpdated = nameof(LeaderboardUpdated);
+
     public static string MasterclassGroup(int masterclassId) => $"masterclass-{masterclassId}";
 
     /// <summary>
@@ -151,4 +157,7 @@ public sealed class SessionNotifier(IHubContext<QuizHub> hub)
 
     public Task SessionEndedAsync(SessionEnded ended, CancellationToken cancellationToken = default) =>
         hub.Clients.Group(QuizHub.MasterclassGroup(ended.MasterclassId)).SendAsync(QuizHub.SessionEnded, ended, cancellationToken);
+
+    public Task LeaderboardUpdatedAsync(SessionLeaderboard leaderboard, CancellationToken cancellationToken = default) =>
+        hub.Clients.Group(QuizHub.MasterclassGroup(leaderboard.MasterclassId)).SendAsync(QuizHub.LeaderboardUpdated, leaderboard, cancellationToken);
 }

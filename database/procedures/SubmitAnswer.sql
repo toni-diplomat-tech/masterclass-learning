@@ -2,7 +2,7 @@
 -- counts only while that Question is running in the Participant's Masterclass and @Now is no later
 -- than its AnswersCloseAt (deadline + grace), even if the reveal is late. Only Participants who were
 -- in the Masterclass when the Question started can answer it, once, without changing it.
--- Takes time only from @Now.
+-- Takes time only from @Now. The Answer's points are scored here (see Scoring below).
 --
 -- Returns one row: Result (Accepted, TooLate, AlreadyAnswered, JoinedAfterStart, UnknownOption,
 -- NoSuchQuestion, UnknownParticipant) and, when the Question was found, MasterclassId, SessionId,
@@ -32,10 +32,10 @@ BEGIN
 
     -- Locking the Session Question makes its Answers and its reveal take turns.
     DECLARE @SessionQuestionId int, @SessionId int, @StartedAt datetime2(7), @AnswersCloseAt datetime2(7),
-            @RevealedAt datetime2(7);
+            @RevealedAt datetime2(7), @TimeLimitMs int;
     SELECT TOP (1)
         @SessionQuestionId = sq.Id, @SessionId = sq.SessionId, @StartedAt = sq.StartedAt,
-        @AnswersCloseAt = sq.AnswersCloseAt, @RevealedAt = sq.RevealedAt
+        @AnswersCloseAt = sq.AnswersCloseAt, @RevealedAt = sq.RevealedAt, @TimeLimitMs = sq.TimeLimitMs
     FROM dbo.SessionQuestions sq WITH (UPDLOCK, HOLDLOCK)
     JOIN dbo.Sessions s ON s.Id = sq.SessionId
     WHERE s.MasterclassId = @MasterclassId AND sq.QuestionId = @QuestionId AND sq.StartedAt IS NOT NULL
@@ -63,10 +63,21 @@ BEGIN
 
     IF @Result = N'Accepted'
     BEGIN
-        INSERT dbo.Answers (SessionQuestionId, ParticipantId, Outcome, OptionPosition, AnsweredAt, ElapsedMs)
+        -- Scoring: a Correct Answer scores base x (1 - 0.5 x elapsed / limit), rounded, with base points
+        -- Easy 500, Medium 750, Hard 1000. Incorrect scores 0. An Answer in the grace period counts as
+        -- answered at the limit, so a Correct Answer never scores below half the base points.
+        DECLARE @ElapsedMs int = DATEDIFF(millisecond, @StartedAt, @Now);
+        DECLARE @ScoredMs int = CASE WHEN @ElapsedMs > @TimeLimitMs THEN @TimeLimitMs ELSE @ElapsedMs END;
+        INSERT dbo.Answers (SessionQuestionId, ParticipantId, Outcome, OptionPosition, AnsweredAt, ElapsedMs, Points)
         SELECT @SessionQuestionId, @ParticipantId, CASE WHEN o.IsCorrect = 1 THEN 1 ELSE 2 END, o.Position, @Now,
-               DATEDIFF(millisecond, @StartedAt, @Now)
+               @ElapsedMs,
+               CASE WHEN o.IsCorrect = 1
+                    THEN CAST(ROUND(
+                        CASE q.Difficulty WHEN 1 THEN 500 WHEN 2 THEN 750 ELSE 1000 END
+                        * (1 - 0.5 * CAST(@ScoredMs AS decimal(19, 6)) / @TimeLimitMs), 0) AS int)
+                    ELSE 0 END
         FROM dbo.QuestionOptions o
+        JOIN dbo.Questions q ON q.Id = o.QuestionId
         WHERE o.QuestionId = @QuestionId AND o.Position = @OptionPosition;
     END
 

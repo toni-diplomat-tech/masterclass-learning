@@ -89,6 +89,7 @@ public sealed class SessionRunner(
             if (revealed is not null)
             {
                 await notifier.QuestionRevealedAsync(revealed, stopping);
+                await SendLeaderboardAsync(sessionId, stopping);
             }
             return revealed is not null;
         }
@@ -101,8 +102,18 @@ public sealed class SessionRunner(
         if (advance.Ended is { } ended)
         {
             await notifier.SessionEndedAsync(ended, stopping);
+            await SendLeaderboardAsync(sessionId, stopping);
         }
         return advance.Started is not null || advance.Ended is not null;
+    }
+
+    // The Session leaderboard as it now stands, after a reveal or the end.
+    private async Task SendLeaderboardAsync(int sessionId, CancellationToken stopping)
+    {
+        if (await engine.GetSessionLeaderboardAsync(sessionId, stopping) is { } leaderboard)
+        {
+            await notifier.LeaderboardUpdatedAsync(leaderboard, stopping);
+        }
     }
 
     // Until dueAt (the server's UTC time), or until woken, whichever comes first.
