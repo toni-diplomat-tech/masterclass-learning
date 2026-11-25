@@ -15,4 +15,15 @@ public sealed partial class QuizEngine
         parameters.Add("SessionId", sessionId);
         return ProcedureJson.Read<SessionLeaderboard>(await QueryJsonAsync("dbo.GetSessionLeaderboard", parameters, cancellationToken));
     }
+
+    /// <summary>
+    /// The Masterclass leaderboard: points summed over all its Sessions' revealed Questions; null if there is
+    /// no such Masterclass.
+    /// </summary>
+    public async Task<MasterclassLeaderboard?> GetMasterclassLeaderboardAsync(int masterclassId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("MasterclassId", masterclassId);
+        return ProcedureJson.Read<MasterclassLeaderboard>(await QueryJsonAsync("dbo.GetMasterclassLeaderboard", parameters, cancellationToken));
+    }
 }

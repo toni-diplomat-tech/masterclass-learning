@@ -16,3 +16,12 @@ public sealed record SessionLeaderboard(
 /// <see cref="Rank"/> (1, 1, 3). <see cref="QuestionPoints"/> is what they scored on the latest revealed Question.
 /// </summary>
 public sealed record LeaderboardEntry(int Rank, int ParticipantId, string Nickname, int Points, int QuestionPoints);
+
+/// <summary>
+/// The Masterclass leaderboard, shown at the end of the meeting: every Participant with an Answer to a revealed
+/// Question of any of its Sessions, by points summed over all Sessions, highest first.
+/// </summary>
+public sealed record MasterclassLeaderboard(int MasterclassId, IReadOnlyList<MasterclassLeaderboardEntry> Entries);
+
+/// <summary>One Participant on the Masterclass leaderboard. Equal <see cref="Points"/> share a <see cref="Rank"/> (1, 1, 3).</summary>
+public sealed record MasterclassLeaderboardEntry(int Rank, int ParticipantId, string Nickname, int Points);
