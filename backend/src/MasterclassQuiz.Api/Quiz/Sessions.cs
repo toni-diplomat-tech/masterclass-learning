@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MasterclassQuiz.Api.Quiz;
 
 /// <summary>
@@ -70,6 +72,23 @@ public sealed record SessionEnded(int MasterclassId, int SessionId, DateTime End
 /// or nothing (both null) because a Question is running, the reveal pause lasts, or the Session ended earlier.
 /// </summary>
 public sealed record SessionAdvance(QuestionStarted? Started, SessionEnded? Ended);
+
+/// <summary>
+/// Where a Session stands and when its next step is due (UTC; null once ended): at <see cref="DueAt"/>
+/// a running Question is revealed (<see cref="QuizEngine.RevealQuestionAsync"/>), or a revealed one's
+/// pause is over and the Session moves on (<see cref="QuizEngine.AdvanceSessionAsync"/>).
+/// </summary>
+public sealed record SessionProgress(int SessionId, int MasterclassId, SessionStep Step, DateTime? DueAt);
+
+[JsonConverter(typeof(JsonStringEnumConverter<SessionStep>))]
+public enum SessionStep
+{
+    /// <summary>A Question takes Answers; it is revealed at its deadline plus grace, or once everyone answered.</summary>
+    QuestionRunning,
+    /// <summary>The latest Question is revealed; the reveal pause runs.</summary>
+    QuestionRevealed,
+    Ended,
+}
 
 /// <summary>
 /// The Quiz settings from configuration (section <see cref="SectionName"/>). Defaults are the spec's.

@@ -30,7 +30,7 @@ Without `HOST_PASSWORD_HASH` every login is refused. For the VPS, `deploy/wizard
 
 ## Quiz settings
 
-Time to answer per Difficulty is in the `Quiz` section of `backend/src/MasterclassQuiz.Api/appsettings.json` (Easy 5 s, Medium 7 s, Hard 10 s). Override one with an environment variable on the backend, e.g. `Quiz__TimeLimitSeconds__Hard=12`. A Session keeps the limits it started with.
+Time to answer per Difficulty is in the `Quiz` section of `backend/src/MasterclassQuiz.Api/appsettings.json` (Easy 5 s, Medium 7 s, Hard 10 s). Override one with an environment variable on the backend, e.g. `Quiz__TimeLimitSeconds__Hard=12`. A Session keeps the limits it started with. After each reveal, the next Question starts after `Quiz:RevealPauseSeconds` (5 s; e.g. `Quiz__RevealPauseSeconds=8`).
 
 ## Test
 

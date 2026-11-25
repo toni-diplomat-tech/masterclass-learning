@@ -120,7 +120,32 @@ public sealed partial class QuizEngine
         };
     }
 
+    /// <summary>Where the Session stands and when its next step is due; null if there is no such Session.</summary>
+    public async Task<SessionProgress?> GetSessionProgressAsync(int sessionId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("SessionId", sessionId);
+        parameters.Add("RevealPauseMs", Settings.RevealPauseMilliseconds);
+        await using var connection = new SqlConnection(database.ConnectionString);
+        var row = await connection.QuerySingleOrDefaultAsync<ProgressRow>(new CommandDefinition(
+            "dbo.GetSessionProgress",
+            parameters,
+            commandType: CommandType.StoredProcedure,
+            cancellationToken: cancellationToken));
+        return row is null
+            ? null
+            : new SessionProgress(row.SessionId, row.MasterclassId, Enum.Parse<SessionStep>(row.Step), row.DueAt is { } due ? Utc(due) : null);
+    }
+
     private QuizSettings Settings => settings ?? new QuizSettings();
+
+    private sealed class ProgressRow
+    {
+        public int SessionId { get; init; }
+        public int MasterclassId { get; init; }
+        public string Step { get; init; } = "";
+        public DateTime? DueAt { get; init; }
+    }
 
     private sealed class AdvanceRow
     {

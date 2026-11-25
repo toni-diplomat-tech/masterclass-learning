@@ -81,6 +81,10 @@ static QuizSettings QuizSettingsFrom(IConfiguration configuration)
             throw new InvalidOperationException($"Quiz:TimeLimitSeconds:{difficulty} must be more than 0.");
         }
     }
+    if (settings.RevealPauseMilliseconds < 0)
+    {
+        throw new InvalidOperationException("Quiz:RevealPauseSeconds can't be negative.");
+    }
     return settings;
 }
 
