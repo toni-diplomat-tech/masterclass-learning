@@ -101,21 +101,19 @@ public sealed partial class QuizEngine
         var parameters = new DynamicParameters();
         parameters.Add("SessionId", sessionId);
         parameters.Add("RevealPauseMs", Settings.RevealPauseMilliseconds);
-        var now = timeProvider.GetUtcNow().UtcDateTime;
-        parameters.Add("Now", now, DbType.DateTime2);
         AdvanceRow row;
         await using (var connection = new SqlConnection(database.ConnectionString))
         {
             row = await connection.QuerySingleAsync<AdvanceRow>(new CommandDefinition(
                 "dbo.AdvanceSession",
-                parameters,
+                WithNow(parameters),
                 commandType: CommandType.StoredProcedure,
                 cancellationToken: cancellationToken));
         }
         return row.Advanced switch
         {
             "Started" => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
-            "Ended" => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, now)),
+            "Ended" => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value))),
             _ => new SessionAdvance(null, null),
         };
     }
@@ -151,6 +149,7 @@ public sealed partial class QuizEngine
     {
         public string? Advanced { get; init; }
         public int? MasterclassId { get; init; }
+        public DateTime? EndedAt { get; init; }
     }
 
     private sealed class SessionQuestionRow
