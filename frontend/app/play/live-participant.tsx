@@ -25,7 +25,7 @@ const REFUSALS: Partial<Record<AnswerResult, string>> = {
  * The phone follows the server: Waiting → Question → Answer locked → Revealed → … → Session over.
  * There is nowhere else to go. The hub knows the Participant by their HTTP-only cookie (same origin).
  */
-export function LivePlayer({ masterclassId, recapToken }: { masterclassId: number; recapToken: string | null }) {
+export function LiveParticipant({ masterclassId, recapToken }: { masterclassId: number; recapToken: string | null }) {
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const [answer, setAnswer] = useState<MyAnswer | null>(null);
   const [connected, setConnected] = useState(false);
