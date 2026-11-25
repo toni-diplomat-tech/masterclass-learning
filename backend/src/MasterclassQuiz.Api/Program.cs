@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using MasterclassQuiz.Api.Database;
+using MasterclassQuiz.Api.HostAuth;
 using MasterclassQuiz.Api.Quiz;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,7 @@ var database = new DatabaseConnection(
 builder.Services.AddSingleton(database);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<QuizEngine>();
+builder.Services.AddHostSession();
 
 var app = builder.Build();
 
@@ -38,6 +40,8 @@ app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, Cancell
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 });
+
+app.MapHostApi();
 
 app.Run();
 
