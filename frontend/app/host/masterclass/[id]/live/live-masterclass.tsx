@@ -7,6 +7,8 @@ import { RevealedQuestion } from "@/app/revealed-question";
 import type { WorkshopOverview } from "@/lib/courses";
 import { followSession, keepFollowing, startSession, type LiveSession } from "@/lib/live";
 import { connectToQuizHub } from "@/lib/quiz-hub";
+import { followLeaderboard, leaderboardFor, type SessionLeaderboard } from "@/lib/leaderboard";
+import { SessionLeaderboardTable } from "@/app/session-leaderboard";
 import { StartSessionDialog } from "./start-session-dialog";
 
 type MasterclassSnapshot = { participants: number } | null;
@@ -33,6 +35,7 @@ export function LiveMasterclass({
   const [count, setCount] = useState(initialParticipants);
   const [connected, setConnected] = useState(false);
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
+  const [leaderboard, setLeaderboard] = useState<SessionLeaderboard | null>(null);
   const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
@@ -45,6 +48,7 @@ export function LiveMasterclass({
       if (update.masterclassId === masterclassId) show(update.participants);
     });
     followSession(connection, masterclassId, setSession);
+    followLeaderboard(connection, masterclassId, setLeaderboard);
 
     const stop = keepFollowing(
       connection,
@@ -98,6 +102,7 @@ export function LiveMasterclass({
     return (
       <>
         <RevealedQuestion revealed={session.revealed} large />
+        <SessionLeaderboardTable leaderboard={leaderboardFor(leaderboard, session.revealed.sessionId)} />
         {participantCount}
       </>
     );
@@ -109,6 +114,9 @@ export function LiveMasterclass({
         <h2 data-testid="session-over" style={{ fontSize: "2.5rem" }}>
           Session over
         </h2>
+      )}
+      {session.step === "ended" && (
+        <SessionLeaderboardTable leaderboard={leaderboardFor(leaderboard, session.ended.sessionId)} />
       )}
       {children}
       {participantCount}
