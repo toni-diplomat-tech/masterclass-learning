@@ -17,11 +17,11 @@ export function ImportForm() {
           {pending ? "Importing…" : "Import"}
         </button>
       </p>
-      {state.summary && (
-        <p role="status" data-testid="import-summary">
-          Imported {state.summary.courseTitle}: {state.summary.workshops} Workshops, {state.summary.lessons} Lessons,{" "}
-          {state.summary.questions} Questions ({state.summary.questionsAdded} added, {state.summary.questionsUpdated}{" "}
-          updated, {state.summary.questionsRetired} retired).
+      {state.outcome && (
+        <p role="status" data-testid="import-outcome">
+          Imported {state.outcome.courseTitle}: {state.outcome.workshops} Workshops, {state.outcome.lessons} Lessons,{" "}
+          {state.outcome.questions} Questions ({state.outcome.questionsAdded} added, {state.outcome.questionsUpdated}{" "}
+          updated, {state.outcome.questionsRetired} retired).
         </p>
       )}
       {state.problems && (

@@ -52,7 +52,7 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
         {
             return CourseImportResult.Rejected(problems);
         }
-        return new CourseImportResult(await results.ReadSingleAsync<CourseImportSummary>(), []);
+        return new CourseImportResult(await results.ReadSingleAsync<CourseImportOutcome>(), []);
     }
 
     /// <summary>Every Course with its current Workshops in order and their Question counts per Difficulty.</summary>

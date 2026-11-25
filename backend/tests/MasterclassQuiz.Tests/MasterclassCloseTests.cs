@@ -86,7 +86,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     public async Task A_draft_masterclass_can_not_be_closed()
     {
         var import = await Engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
-        var draft = (await Engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026")).Masterclass!;
+        var draft = (await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026")).Masterclass!;
 
         var closed = await Engine.CloseMasterclassAsync(draft.Id);
 
@@ -144,7 +144,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     {
         var engine = new QuizEngine(sqlServer.Connection, _time, random);
         var import = await engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
-        var created = await engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         return (await engine.OpenMasterclassAsync(created.Masterclass!.Id))!;
     }
 }

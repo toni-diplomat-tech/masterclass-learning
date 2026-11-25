@@ -16,9 +16,9 @@ public sealed record MeetingFixture(int MasterclassId, string JoinCode, int Sess
         var import = await engine.ImportCourseAsync(file.ToJsonString());
         Assert.Empty(import.Problems);
         var workshopId = (await engine.ListCoursesAsync())
-            .Single(c => c.Id == import.Summary!.CourseId).Workshops
+            .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
-        var created = await engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         var opened = await engine.OpenMasterclassAsync(created.Masterclass!.Id);
 
         var tokens = new List<string>();

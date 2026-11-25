@@ -8,7 +8,7 @@ export type WorkshopOverview = { id: number; slug: string; title: string; number
 
 export type CourseOverview = { id: number; slug: string; title: string; workshops: WorkshopOverview[] };
 
-export type ImportSummary = {
+export type ImportOutcome = {
   courseSlug: string;
   courseTitle: string;
   workshops: number;
@@ -19,7 +19,7 @@ export type ImportSummary = {
   questionsRetired: number;
 };
 
-export type ImportResult = { summary: ImportSummary } | { problems: string[] };
+export type ImportResult = { outcome: ImportOutcome } | { problems: string[] };
 
 const IMPORT_TIMEOUT_MS = 30000;
 
@@ -38,7 +38,7 @@ export async function importCourse(fileContents: string): Promise<ImportResult> 
     body: fileContents,
     signal: AbortSignal.timeout(IMPORT_TIMEOUT_MS),
   });
-  if (response.ok) return { summary: await response.json() };
+  if (response.ok) return { outcome: await response.json() };
   if (response.status === 400) {
     const problem: { problems?: string[] } = await response.json();
     if (problem.problems?.length) return { problems: problem.problems };

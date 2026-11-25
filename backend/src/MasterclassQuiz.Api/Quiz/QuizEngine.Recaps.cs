@@ -4,7 +4,7 @@ using Microsoft.Data.SqlClient;
 
 namespace MasterclassQuiz.Api.Quiz;
 
-// Recaps: each Participant's summary of a Masterclass, at an unguessable link of its own.
+// Recaps: each Participant's look back at a Masterclass, at an unguessable link of its own.
 public sealed partial class QuizEngine
 {
     /// <summary>

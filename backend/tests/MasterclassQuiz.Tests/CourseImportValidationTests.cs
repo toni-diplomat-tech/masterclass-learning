@@ -166,7 +166,7 @@ public sealed class CourseImportValidationTests(SqlServerFixture sqlServer)
         var result = await _engine.ImportCourseAsync(_file.ToJsonString());
 
         Assert.Equal(problems, result.Problems);
-        Assert.Null(result.Summary);
+        Assert.Null(result.Outcome);
         Assert.Null(await _engine.GetCourseAsync((string)_file["course"]!["slug"]!));
     }
 }

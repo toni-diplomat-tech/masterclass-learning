@@ -208,9 +208,9 @@ public sealed class RecapTests(SqlServerFixture sqlServer)
     {
         var import = await Engine.ImportCourseAsync(importFile.ToJsonString());
         Assert.Empty(import.Problems);
-        var created = await Engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         var opened = await Engine.OpenMasterclassAsync(created.Masterclass!.Id);
-        var workshops = (await Engine.ListCoursesAsync()).Single(c => c.Id == import.Summary.CourseId).Workshops;
+        var workshops = (await Engine.ListCoursesAsync()).Single(c => c.Id == import.Outcome.CourseId).Workshops;
         return new Meeting(this, opened!.Id, opened.JoinCode!, workshops.ToDictionary(w => w.Slug, w => w.Id));
     }
 

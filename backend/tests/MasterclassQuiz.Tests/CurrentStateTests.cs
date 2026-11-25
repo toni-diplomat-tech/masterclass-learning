@@ -25,7 +25,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     public async Task Before_any_session_everyone_waits()
     {
         var import = await Engine.ImportCourseAsync(SessionFiles.WithWorkshopQuestions(1, 0, 0).ToJsonString());
-        var created = await Engine.CreateMasterclassAsync(import.Summary!.CourseId, "Dev team 2026");
+        var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
         var opened = await Engine.OpenMasterclassAsync(created.Masterclass!.Id);
         var token = (await Engine.JoinMasterclassAsync(opened!.JoinCode!, null))!.Token;
 

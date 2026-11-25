@@ -85,9 +85,9 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
         return (await _engine.CreateMasterclassAsync(course.CourseId, "Dev team 2026")).Masterclass!;
     }
 
-    private async Task<CourseImportSummary> ImportCourseAsync()
+    private async Task<CourseImportOutcome> ImportCourseAsync()
     {
         var result = await _engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
-        return result.Summary!;
+        return result.Outcome!;
     }
 }
