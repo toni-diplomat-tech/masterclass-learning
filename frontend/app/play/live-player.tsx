@@ -6,6 +6,7 @@ import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import { followSession, keepFollowing, submitAnswer, type AnswerResult, type LiveSession, type QuestionRevealed } from "@/lib/live";
 import { connectToQuizHub } from "@/lib/quiz-hub";
+import { RecapLink } from "./recap-link";
 
 /** This phone's tap on a Question: being sent, locked in by the server, or refused (with the reason). */
 type MyAnswer = { questionId: number; position: number; status: "sending" | "locked" | "refused"; result?: AnswerResult };
@@ -20,7 +21,7 @@ const REFUSALS: Partial<Record<AnswerResult, string>> = {
  * The phone follows the server: Waiting → Question → Answer locked → Revealed → … → Session over.
  * There is nowhere else to go. The hub knows the Participant by their HTTP-only cookie (same origin).
  */
-export function LivePlayer({ masterclassId }: { masterclassId: number }) {
+export function LivePlayer({ masterclassId, recapToken }: { masterclassId: number; recapToken: string | null }) {
   const [session, setSession] = useState<LiveSession>({ step: "waiting" });
   const [answer, setAnswer] = useState<MyAnswer | null>(null);
   const [connected, setConnected] = useState(false);
@@ -59,6 +60,7 @@ export function LivePlayer({ masterclassId }: { masterclassId: number }) {
   return (
     <>
       <Screen session={session} answer={answer} onChoose={choose} />
+      {session.step === "ended" && <RecapLink recapToken={recapToken} />}
       {!connected && <small style={{ display: "block" }}>Connecting to live updates…</small>}
     </>
   );
