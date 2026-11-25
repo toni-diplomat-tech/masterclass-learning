@@ -26,6 +26,24 @@ test("Questions come from every Question file, in file name order, so the output
   assert.deepEqual(file, documentedExample);
 });
 
+test("a Workshop is titled after its folder unless the build config names it", () => {
+  const config = buildConfig(
+    {
+      "course/01-unit-tests/01-why-we-test.md": "# Why we test\n",
+      "course/02-test-doubles/01-stubs-and-mocks.md": "# Stubs and mocks\n",
+    },
+    { workshopTitles: { "02-test-doubles": "Test doubles: stubs, mocks and fakes" } },
+  );
+
+  const { file, problems } = buildImportFile(config);
+
+  assert.deepEqual(problems, []);
+  assert.deepEqual(
+    file.workshops.map((w) => w.title),
+    ["Unit tests", "Test doubles: stubs, mocks and fakes"],
+  );
+});
+
 test("a Question naming an unknown Lesson slug is reported", () => {
   const config = buildConfig({
     "course/01-unit-tests/01-why-we-test.md": "# Why we test\n",

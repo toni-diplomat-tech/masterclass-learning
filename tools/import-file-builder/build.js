@@ -31,12 +31,13 @@ function readWorkshops(courseFolder, config, problems) {
     }
   }
 
+  const titles = config.workshopTitles ?? {};
   const lessonFiles = new Map();
   return folders
     .filter((folder) => !excluded.includes(folder.name) && !excluded.includes(folder.slug))
     .map((folder) => ({
       slug: folder.slug,
-      title: titleFromSlug(folder.slug),
+      title: titles[folder.name] ?? titles[folder.slug] ?? titleFromSlug(folder.slug),
       number: folder.number,
       lessons: readLessons(join(courseFolder, folder.name), folder.name, config, lessonFiles, problems),
     }));
