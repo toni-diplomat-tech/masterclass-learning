@@ -1,0 +1,7 @@
+{
+  "course": { "slug": "testing-fundamentals", "title": "Testing Fundamentals" },
+  "courseFolder": "course",
+  "questionsFolder": "questions",
+  "lessonUrl": "https://example.com/testing-fundamentals/{workshopFolder}/{lessonFile}",
+  "exclude": ["03-office-hours"]
+}
