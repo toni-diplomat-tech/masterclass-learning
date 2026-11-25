@@ -9,7 +9,7 @@ namespace MasterclassQuiz.Api.Live;
 /// The live meeting, at <see cref="Path"/>. Each Masterclass has one group (<see cref="MasterclassGroup"/>)
 /// that its broadcasts go to. Like the REST endpoints, the hub is a thin caller of the Quiz engine.
 /// </summary>
-public sealed class QuizHub(QuizEngine engine, SessionNotifier sessions, SessionRunner runner) : Hub
+public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions, SessionRunner runner) : Hub
 {
     public const string Path = "/hubs/quiz";
 
