@@ -16,6 +16,16 @@ docker compose up --build
 
 Then open http://localhost:3000/health. Copy `.env.example` to `.env` to change the SA password or ports.
 
+## Host password
+
+The Host logs in at `/host/login`. The backend checks the password against a hash in the `HOST_PASSWORD_HASH` environment variable; the password itself is never stored. Print a hash and put it in `.env` (git-ignored):
+
+```sh
+dotnet run --project backend/src/MasterclassQuiz.Api -- hash-host-password
+```
+
+Without `HOST_PASSWORD_HASH` every login is refused.
+
 ## Test
 
 Docker must be running: the engine tests start SQL Server with Testcontainers.
