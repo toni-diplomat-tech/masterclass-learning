@@ -19,7 +19,7 @@ namespace MasterclassQuiz.Tests;
 public sealed class SessionRunHubTests(SqlServerFixture sqlServer) : IDisposable
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
-    private static readonly string[] Messages = ["QuestionStarted", "AnswerCountUpdated", "QuestionRevealed", "SessionEnded"];
+    private static readonly string[] Messages = ["QuestionStarted", "AnswerCountUpdated", "QuestionRevealed", "SessionEnded", "LeaderboardUpdated"];
 
     private readonly WebApplicationFactory<Program> _app = new BackendFactory(sqlServer, HostPassword.Hash(HostClient.Password))
         .WithWebHostBuilder(builder => builder
@@ -72,6 +72,39 @@ public sealed class SessionRunHubTests(SqlServerFixture sqlServer) : IDisposable
         {
             Assert.Equal((masterclassId, (int)first["sessionId"]!), ((int)ended["masterclassId"]!, (int)ended["sessionId"]!));
             Assert.True((DateTime)ended["endedAt"]! >= ((DateTime)secondRevealed["revealedAt"]!).AddMilliseconds(300));
+        }
+    }
+
+    [Fact]
+    public async Task The_session_leaderboard_follows_each_reveal_and_the_end()
+    {
+        var (host, hostCookie) = await LoggedInHostAsync();
+        var (masterclassId, joinCode, workshopId) = await OpenMeetingAsync(host, easy: 1);
+        await using var projector = Connect(hostCookie);
+        var onProjector = Listen(projector);
+        await projector.StartAsync();
+        await projector.InvokeAsync<JsonObject>("WatchMasterclass", masterclassId);
+        await using var phone = Connect(await JoinAsync(joinCode));
+        var onPhone = Listen(phone);
+        await phone.StartAsync();
+        var me = await phone.InvokeAsync<JsonObject>("WatchAsParticipant");
+
+        await projector.InvokeAsync<JsonObject>("StartSession", masterclassId, workshopId, new { easy = 1, medium = 0, hard = 0 });
+        var question = await NextAsync(onPhone, "QuestionStarted");
+        await phone.InvokeAsync<JsonObject>("SubmitAnswer", (int)question["questionId"]!, 1);
+
+        // After the reveal, then once more (final) after the Session ends.
+        foreach (var (step, ended) in new[] { ("QuestionRevealed", false), ("SessionEnded", true) })
+        {
+            await NextAsync(onProjector, step);
+            await NextAsync(onPhone, step);
+            foreach (var leaderboard in new[] { await NextAsync(onProjector, "LeaderboardUpdated"), await NextAsync(onPhone, "LeaderboardUpdated") })
+            {
+                Assert.Equal((masterclassId, (int)question["sessionId"]!, ended), ((int)leaderboard["masterclassId"]!, (int)leaderboard["sessionId"]!, (bool)leaderboard["ended"]!));
+                var entry = Assert.Single(leaderboard["entries"]!.AsArray())!;
+                Assert.Equal(((int)me["id"]!, (string?)me["nickname"], 1), ((int)entry["participantId"]!, (string?)entry["nickname"], (int)entry["rank"]!));
+                Assert.InRange((int)entry["points"]!, 250, 500);
+            }
         }
     }
 
