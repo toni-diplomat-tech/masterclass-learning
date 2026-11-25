@@ -6,7 +6,9 @@ import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import type { WorkshopOverview } from "@/lib/courses";
 import { followSession, keepFollowing, startSession, type LiveSession } from "@/lib/live";
+import { getCurrentState, newerLeaderboard, newerSession, resumeSession } from "@/lib/current-state";
 import { connectToQuizHub } from "@/lib/quiz-hub";
+import { ResumeButton } from "./resume-button";
 import { followLeaderboard, leaderboardFor, type SessionLeaderboard } from "@/lib/leaderboard";
 import { SessionLeaderboardTable } from "@/app/session-leaderboard";
 import { StartSessionDialog } from "./start-session-dialog";
@@ -55,6 +57,11 @@ export function LiveMasterclass({
       async () => {
         const snapshot = await connection.invoke<MasterclassSnapshot>("WatchMasterclass", masterclassId);
         if (snapshot) show(snapshot.participants);
+        // Where the Session stands now (after a reload, or broadcasts missed while reconnecting).
+        const state = await getCurrentState(connection, masterclassId);
+        if (!state) return;
+        setLeaderboard((shown) => newerLeaderboard(shown, state.leaderboard));
+        setSession((shown) => newerSession(shown, state));
       },
       setConnected,
     );
@@ -68,6 +75,13 @@ export function LiveMasterclass({
     const connection = connectionRef.current;
     if (!connection || !connected) return ["Not connected to live updates yet. Try again in a moment."];
     return startSession(connection, masterclassId, workshopId, mix);
+  };
+
+  const resume = async () => {
+    const connection = connectionRef.current;
+    if (!connection) throw new Error("Not connected");
+    const state = await resumeSession(connection, masterclassId);
+    if (state) setSession((shown) => newerSession(shown, state));
   };
 
   const running = session.step === "question" || session.step === "revealed";
@@ -94,6 +108,7 @@ export function LiveMasterclass({
           }
         />
         {participantCount}
+        <ResumeButton onResume={resume} />
       </>
     );
   }
@@ -104,6 +119,7 @@ export function LiveMasterclass({
         <RevealedQuestion revealed={session.revealed} large />
         <SessionLeaderboardTable leaderboard={leaderboardFor(leaderboard, session.revealed.sessionId)} />
         {participantCount}
+        <ResumeButton onResume={resume} />
       </>
     );
   }
