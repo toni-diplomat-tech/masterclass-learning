@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.Quiz;
 
@@ -15,20 +16,37 @@ var app = builder.Build();
 
 DatabaseMigrator.Migrate(database, DatabaseMigrator.DefaultScriptsDirectory);
 
+// Below the frontend health page's 5 s fetch timeout.
+var databaseHealthTimeout = TimeSpan.FromSeconds(3);
+
 app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
     try
     {
-        var health = await engine.CheckHealthAsync(cancellationToken);
-        return Results.Ok(new HealthResponse("ok", "ok", health.CheckedAtUtc));
+        // Answer inside the frontend's fetch timeout even when the database is down. SqlClient can
+        // block for its whole connect timeout (15 s) before yielding, ignoring cancellation, so run
+        // the check on the thread pool and stop waiting for it after a few seconds.
+        var health = await Task.Run(() => engine.CheckHealthAsync(cancellationToken), cancellationToken)
+            .WaitAsync(databaseHealthTimeout, cancellationToken);
+        return Results.Ok(new HealthResponse(HealthStatus.Ok, HealthStatus.Ok, health.CheckedAtUtc));
     }
-    catch (Exception ex) when (ex is not OperationCanceledException)
+    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
     {
         logger.LogWarning(ex, "Database health check failed");
-        return Results.Json(new HealthResponse("ok", "unreachable", null), statusCode: StatusCodes.Status503ServiceUnavailable);
+        return Results.Json(
+            new HealthResponse(HealthStatus.Ok, HealthStatus.Unreachable, null),
+            statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 });
 
 app.Run();
 
-internal sealed record HealthResponse(string Backend, string Database, DateTime? DatabaseCheckedAtUtc);
+internal sealed record HealthResponse(HealthStatus Backend, HealthStatus Database, DateTime? DatabaseCheckedAtUtc);
+
+/// <summary>Serialized as the lowercase strings the frontend's health page matches on.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<HealthStatus>))]
+internal enum HealthStatus
+{
+    [JsonStringEnumMemberName("ok")] Ok,
+    [JsonStringEnumMemberName("unreachable")] Unreachable,
+}
