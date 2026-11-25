@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.Extensions.Time.Testing;
 
@@ -51,6 +52,31 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
         Assert.Equal((4, 1), (revealed.Answered, revealed.TimedOut));
         Assert.Equal(_time.GetUtcNow().UtcDateTime, revealed.RevealedAt);
         Assert.Equal(DateTimeKind.Utc, revealed.RevealedAt.Kind);
+    }
+
+    [Fact]
+    public async Task A_re_import_while_a_question_runs_changes_neither_its_options_nor_its_correct_option()
+    {
+        var meeting = await MeetingFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var questionId = meeting.Question.QuestionId;
+        await Engine.SubmitAnswerAsync(meeting.Tokens[0], questionId, 1);
+        meeting.ImportFile.Question("easy-1")["options"] = new JsonArray(
+            new JsonObject { ["text"] = "Wrong answer to easy-1" },
+            new JsonObject { ["text"] = "Right answer to easy-1", ["correct"] = true });
+        Assert.Empty((await Engine.ImportCourseAsync(meeting.ImportFile.ToJsonString())).Problems);
+
+        var started = await Engine.GetStartedQuestionAsync(meeting.SessionId);
+        var late = await Engine.SubmitAnswerAsync(meeting.Tokens[1], questionId, 3);
+        _time.Advance(TimeSpan.FromMilliseconds(3_500));
+        var revealed = await Engine.RevealQuestionAsync(meeting.SessionId);
+
+        Assert.Equal(meeting.Question.Options, started!.Options);
+        Assert.Equal(AnswerResult.Accepted, late.Result);
+        Assert.NotNull(revealed);
+        Assert.Equal(1, revealed.CorrectOption);
+        Assert.Equal(
+            [new RevealedOption(1, "Right answer to easy-1", 1), new RevealedOption(2, "Wrong answer to easy-1", 0), new RevealedOption(3, "Another wrong answer to easy-1", 1)],
+            revealed.Options);
     }
 
     [Fact]

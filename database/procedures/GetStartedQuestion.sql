@@ -1,5 +1,5 @@
 -- The Session's most recently started Question as one JSON document, as Participants may see it: its
--- text, options (position and text, never which one is correct), start time and deadline (UTC, with Z).
+-- text, options as it started with (position and text, never which one is correct), start time and deadline (UTC, with Z).
 -- NULL when no Question of the Session has started.
 CREATE OR ALTER PROCEDURE dbo.GetStartedQuestion
     @SessionId int
@@ -19,8 +19,8 @@ BEGIN
             q.Text AS text,
             JSON_QUERY(ISNULL((
                 SELECT o.Position AS position, o.Text AS text
-                FROM dbo.QuestionOptions o
-                WHERE o.QuestionId = q.Id AND o.RetiredAt IS NULL
+                FROM dbo.SessionQuestionOptions o
+                WHERE o.SessionQuestionId = sq.Id
                 ORDER BY o.Position
                 FOR JSON PATH), N'[]')) AS options,
             CONVERT(nvarchar(30), sq.StartedAt, 127) + N'Z' AS startedAt,

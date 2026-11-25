@@ -6,7 +6,8 @@
 --   PerfectScore    every Answer Correct: lessons = [];
 --   MissedQuestions lessons = the Lessons of their Incorrect and Timed out Answers, each with those
 --                   Questions in Session order: the Question, their option's text (null when Timed out)
---                   and the correct option's text.
+--                   and the correct option's text, both from the options the Question ran with
+--                   (dbo.SessionQuestionOptions), so a later re-import doesn't change them.
 -- A Question that started before the Participant joined has no Answer, so it is neither missed nor Correct.
 -- No time rule here, so no @Now: the Recap reads the same whenever it is opened, Masterclass closed or not.
 CREATE OR ALTER PROCEDURE dbo.GetRecap
@@ -17,11 +18,11 @@ BEGIN
 
     -- The Participant's Answers in the Masterclass's ended Sessions.
     DECLARE @Answers TABLE (
-        SessionId int NOT NULL, Position int NOT NULL, QuestionId int NOT NULL, LessonId int NOT NULL,
-        Outcome tinyint NOT NULL, OptionPosition tinyint NULL);
+        SessionId int NOT NULL, SessionQuestionId int NOT NULL, Position int NOT NULL, QuestionId int NOT NULL,
+        LessonId int NOT NULL, Outcome tinyint NOT NULL, OptionPosition tinyint NULL);
 
-    INSERT @Answers (SessionId, Position, QuestionId, LessonId, Outcome, OptionPosition)
-    SELECT s.Id, sq.Position, sq.QuestionId, q.LessonId, a.Outcome, a.OptionPosition
+    INSERT @Answers (SessionId, SessionQuestionId, Position, QuestionId, LessonId, Outcome, OptionPosition)
+    SELECT s.Id, sq.Id, sq.Position, sq.QuestionId, q.LessonId, a.Outcome, a.OptionPosition
     FROM dbo.Participants p
     JOIN dbo.Sessions s ON s.MasterclassId = p.MasterclassId AND s.EndedAt IS NOT NULL
     JOIN dbo.SessionQuestions sq ON sq.SessionId = s.Id
@@ -54,12 +55,12 @@ BEGIN
                                        SELECT q.Text AS text,
                                               chosen.Text AS answer,
                                               CAST(CASE WHEN a.Outcome = 3 THEN 1 ELSE 0 END AS bit) AS timedOut,
-                                              (SELECT TOP (1) o.Text FROM dbo.QuestionOptions o
-                                               WHERE o.QuestionId = q.Id AND o.IsCorrect = 1 AND o.RetiredAt IS NULL) AS correctOption
+                                              (SELECT TOP (1) o.Text FROM dbo.SessionQuestionOptions o
+                                               WHERE o.SessionQuestionId = a.SessionQuestionId AND o.IsCorrect = 1) AS correctOption
                                        FROM @Answers a
                                        JOIN dbo.Questions q ON q.Id = a.QuestionId
-                                       LEFT JOIN dbo.QuestionOptions chosen
-                                           ON chosen.QuestionId = q.Id AND chosen.Position = a.OptionPosition
+                                       LEFT JOIN dbo.SessionQuestionOptions chosen
+                                           ON chosen.SessionQuestionId = a.SessionQuestionId AND chosen.Position = a.OptionPosition
                                        WHERE a.SessionId = s.Id AND a.Outcome <> 1 AND a.LessonId = l.Id
                                        ORDER BY a.Position
                                        FOR JSON PATH, INCLUDE_NULL_VALUES)) AS questions
