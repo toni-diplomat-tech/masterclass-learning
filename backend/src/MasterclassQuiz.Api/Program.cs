@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using MasterclassQuiz.Api.Courses;
 using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.HostAuth;
 using MasterclassQuiz.Api.Quiz;
@@ -55,7 +56,7 @@ app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, Cancell
     }
 });
 
-app.MapHostApi();
+app.MapHostApi().MapCourseEndpoints();
 
 app.Run();
 return 0;
