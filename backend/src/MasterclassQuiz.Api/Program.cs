@@ -2,7 +2,9 @@ using System.Text.Json.Serialization;
 using MasterclassQuiz.Api.Courses;
 using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.HostAuth;
+using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Masterclasses;
+using MasterclassQuiz.Api.Participants;
 using MasterclassQuiz.Api.Quiz;
 
 // `hash-host-password`: read a password from stdin and print the value for HOST_PASSWORD_HASH.
@@ -29,6 +31,8 @@ builder.Services.AddSingleton(database);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<QuizEngine>();
 builder.Services.AddHostSession();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ParticipantNotifier>();
 
 var app = builder.Build();
 
@@ -58,6 +62,8 @@ app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, Cancell
 });
 
 app.MapHostApi().MapCourseEndpoints().MapMasterclassEndpoints();
+app.MapParticipantEndpoints();
+app.MapHub<QuizHub>(QuizHub.Path);
 
 app.Run();
 return 0;
