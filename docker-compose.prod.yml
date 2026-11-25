@@ -1,0 +1,44 @@
+# Production override for the VPS, layered on docker-compose.yml.
+# The server's .env sets COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml, so a plain
+# `docker compose up -d` there runs both files (see deploy/README.md).
+# Secrets have no defaults here: compose refuses to start while one is missing from .env.
+
+services:
+  sqlserver:
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    # Not published: only the backend reaches SQL Server, over the compose network.
+    ports: !reset []
+    restart: unless-stopped
+
+  backend:
+    environment:
+      ConnectionStrings__Quiz: "Server=sqlserver,1433;Database=MasterclassQuiz;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};TrustServerCertificate=True"
+    ports: !reset []
+    restart: unless-stopped
+
+  frontend:
+    # Reached only through Caddy.
+    ports: !reset []
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here: keep the volume so a restart doesn't request new ones.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

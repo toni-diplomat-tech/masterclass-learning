@@ -1,0 +1,6 @@
+# Caddy gets and renews the HTTPS certificate for $DOMAIN automatically.
+# Everything goes to the frontend, which reaches the backend over the compose network.
+{$DOMAIN} {
+	encode
+	reverse_proxy frontend:3000
+}
