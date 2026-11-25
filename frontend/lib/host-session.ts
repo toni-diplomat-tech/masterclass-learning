@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { backendUrl } from "./backend";
 import { HOST_COOKIE, HOST_LOGIN_PATH } from "./host-cookie";
+import { readSetCookie } from "./set-cookie";
 
 // Server-side only. Every Host page and Server Action reaches the backend through hostFetch, so the
 // backend, not the frontend, decides whether the session is valid.
@@ -36,20 +37,5 @@ export async function requireHost(): Promise<void> {
 
 /** The Host session cookie from the backend's login response, to relay to the browser. */
 export function readHostCookie(setCookies: string[]): { value: string; expires?: Date } | null {
-  for (const setCookie of setCookies) {
-    const [pair, ...attributes] = setCookie.split(";");
-    const separator = pair.indexOf("=");
-    if (pair.slice(0, separator).trim() !== HOST_COOKIE) continue;
-
-    const expiresText = attributes
-      .map((attribute) => attribute.trim())
-      .find((attribute) => attribute.toLowerCase().startsWith("expires="))
-      ?.slice("expires=".length);
-    const expires = expiresText ? new Date(expiresText) : undefined;
-    return {
-      value: pair.slice(separator + 1).trim(),
-      expires: expires && !Number.isNaN(expires.getTime()) ? expires : undefined,
-    };
-  }
-  return null;
+  return readSetCookie(setCookies, HOST_COOKIE);
 }
