@@ -11,7 +11,8 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-LocalDev_Passw0rd}
       MSSQL_MEMORY_LIMIT_MB: "2048"
     ports:
-      - "${SQLSERVER_PORT:-1433}:1433"
+      # Loopback only: reachable from this machine's tools, not from the network.
+      - "127.0.0.1:${SQLSERVER_PORT:-1433}:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
     healthcheck:
