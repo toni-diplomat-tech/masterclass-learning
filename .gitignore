@@ -13,3 +13,4 @@ next-env.d.ts
 
 # Local environment
 .env
+deploy/.env.production

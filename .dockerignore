@@ -6,3 +6,4 @@
 .claude/
 content/
 .env
+deploy/.env.production
