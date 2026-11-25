@@ -24,10 +24,16 @@ export function buildImportFile(configPath) {
     }));
 
   const questionsFolder = resolve(dirname(configPath), config.questionsFolder);
-  const questions = readdirSync(questionsFolder)
-    .filter((name) => name.endsWith(".json"))
-    .sort()
-    .flatMap((name) => JSON.parse(readFileSync(join(questionsFolder, name), "utf8")));
+  const lessonSlugs = new Set(workshops.flatMap((w) => w.lessons.map((l) => l.slug.toLowerCase())));
+  const questions = [];
+  for (const name of readdirSync(questionsFolder).filter((n) => n.endsWith(".json")).sort()) {
+    for (const question of JSON.parse(readFileSync(join(questionsFolder, name), "utf8"))) {
+      if (!lessonSlugs.has(String(question.lesson).toLowerCase())) {
+        problems.push(`${name}: Question "${question.id}" names Lesson "${question.lesson}", which is not in the course folder.`);
+      }
+      questions.push(question);
+    }
+  }
 
   return { file: { course: config.course, workshops, questions }, problems };
 }
