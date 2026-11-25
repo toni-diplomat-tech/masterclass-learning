@@ -6,6 +6,7 @@ Monorepo for this platform
 | `frontend/` | Next.js (App Router) |
 | `backend/` | ASP.NET Core (.NET 10): REST API and the Quiz engine |
 | `database/` | `migrations/` (numbered, run once) and `procedures/` (`CREATE OR ALTER`, run on every startup), applied by DbUp |
+| `tools/` | `import-file-builder/`: builds a Course import file from a course folder and Question files |
 | `content/` | git-ignored course material, Question files and import files (format: `docs/import-file/`) |
 | `deploy/` | production Caddyfile, deploy wizard, swap script |
 
