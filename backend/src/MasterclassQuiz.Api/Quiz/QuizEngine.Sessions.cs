@@ -86,8 +86,8 @@ public sealed partial class QuizEngine
         var row = await QuerySingleAsync<AdvanceRow>("dbo.AdvanceSession", WithNow(parameters), cancellationToken);
         return row.Advanced switch
         {
-            "Started" => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
-            "Ended" => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value))),
+            Advanced.Started => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
+            Advanced.Ended => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value))),
             _ => new SessionAdvance(null, null),
         };
     }
@@ -101,7 +101,7 @@ public sealed partial class QuizEngine
         var row = await QuerySingleOrDefaultAsync<ProgressRow>("dbo.GetSessionProgress", parameters, cancellationToken);
         return row is null
             ? null
-            : new SessionProgress(row.SessionId, row.MasterclassId, Enum.Parse<SessionStep>(row.Step), row.DueAt is { } due ? Utc(due) : null);
+            : new SessionProgress(row.SessionId, row.MasterclassId, row.Step, row.DueAt is { } due ? Utc(due) : null);
     }
 
     private QuizSettings Settings => settings ?? new QuizSettings();
@@ -110,15 +110,22 @@ public sealed partial class QuizEngine
     {
         public int SessionId { get; init; }
         public int MasterclassId { get; init; }
-        public string Step { get; init; } = "";
+        public SessionStep Step { get; init; }
         public DateTime? DueAt { get; init; }
     }
 
     private sealed class AdvanceRow
     {
-        public string? Advanced { get; init; }
+        public Advanced? Advanced { get; init; }
         public int? MasterclassId { get; init; }
         public DateTime? EndedAt { get; init; }
+    }
+
+    // dbo.AdvanceSession's Advanced: what it did (NULL: nothing).
+    private enum Advanced
+    {
+        Started,
+        Ended,
     }
 
     private sealed class SessionQuestionRow

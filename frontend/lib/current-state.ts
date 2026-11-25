@@ -14,6 +14,9 @@ export type AnswerOutcome = "Correct" | "Incorrect" | "TimedOut";
  */
 export type OwnAnswer = { questionId: number; canAnswer: boolean; option: number | null; outcome: AnswerOutcome | null };
 
+/** The server's step (backend LiveStep); `liveSessionOf` is the one place it becomes a LiveSession. */
+export type LiveStep = "Waiting" | "Question" | "Revealed" | "Ended";
+
 /**
  * What to show now. `masterclassStatus` is "Closed" once the Host closed the Masterclass, so a screen
  * that missed the MasterclassClosed broadcast still moves on to its end. Only the part named by `step` is set; `leaderboard` (the Session leaderboard) with
@@ -23,7 +26,7 @@ export type OwnAnswer = { questionId: number; canAnswer: boolean; option: number
 export type CurrentState = {
   masterclassId: number;
   masterclassStatus: MasterclassStatus;
-  step: "Waiting" | "Question" | "Revealed" | "Ended";
+  step: LiveStep;
   question: QuestionStarted | null;
   count: AnswerCount | null;
   revealed: QuestionRevealed | null;

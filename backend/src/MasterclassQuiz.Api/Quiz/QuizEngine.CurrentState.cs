@@ -54,7 +54,7 @@ public sealed partial class QuizEngine
     // Null when the Question read is not the one the row is about (the Session moved on meanwhile).
     private async Task<CurrentState?> ToCurrentStateAsync(CurrentStateRow row, CancellationToken cancellationToken)
     {
-        var step = Enum.Parse<LiveStep>(row.Step);
+        var step = row.Step;
         QuestionStarted? question = null;
         AnswerCount? count = null;
         QuestionRevealed? revealed = null;
@@ -101,7 +101,7 @@ public sealed partial class QuizEngine
         public int MasterclassId { get; init; }
         public int MasterclassStatus { get; init; }
         public int? SessionId { get; init; }
-        public string Step { get; init; } = "";
+        public LiveStep Step { get; init; }
         public DateTime? EndedAt { get; init; }
         public int? QuestionId { get; init; }
         public int Answered { get; init; }

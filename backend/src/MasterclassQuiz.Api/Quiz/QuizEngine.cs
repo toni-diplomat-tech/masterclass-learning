@@ -56,6 +56,8 @@ public sealed partial class QuizEngine(DatabaseConnection database, TimeProvider
     }
 
     // Calling procedures: each call opens its own connection (pooled) and runs one stored procedure.
+    // Rows are read into private row classes; a step a procedure names with a string (e.g. Step,
+    // Advanced) is read straight into its enum, whose member names are the procedure's strings.
 
     // For procedures that return one nvarchar(max) built with FOR JSON (null when there is nothing).
     private Task<string?> QueryJsonAsync(string procedure, DynamicParameters parameters, CancellationToken cancellationToken) =>
