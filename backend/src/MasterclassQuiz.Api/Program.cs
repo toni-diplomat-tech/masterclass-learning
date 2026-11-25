@@ -1,6 +1,21 @@
 using System.Text.Json.Serialization;
 using MasterclassQuiz.Api.Database;
+using MasterclassQuiz.Api.HostAuth;
 using MasterclassQuiz.Api.Quiz;
+
+// `hash-host-password`: read a password from stdin and print the value for HOST_PASSWORD_HASH.
+if (args is ["hash-host-password"])
+{
+    Console.Error.Write("Host password: ");
+    var password = Console.ReadLine();
+    if (string.IsNullOrEmpty(password))
+    {
+        Console.Error.WriteLine("No password given.");
+        return 1;
+    }
+    Console.WriteLine(HostPassword.Hash(password));
+    return 0;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +26,7 @@ var database = new DatabaseConnection(
 builder.Services.AddSingleton(database);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<QuizEngine>();
+builder.Services.AddHostSession();
 
 var app = builder.Build();
 
@@ -39,7 +55,10 @@ app.MapGet("/health", async (QuizEngine engine, ILogger<Program> logger, Cancell
     }
 });
 
+app.MapHostApi();
+
 app.Run();
+return 0;
 
 internal sealed record HealthResponse(HealthStatus Backend, HealthStatus Database, DateTime? DatabaseCheckedAtUtc);
 

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { backendUrl } from "@/lib/backend";
 
 // Matches the backend's HealthStatus enum, serialized as lowercase strings.
 type HealthStatus = "ok" | "unreachable";
@@ -13,9 +14,6 @@ type HealthCheck =
   | { kind: "reported"; health: BackendHealth }
   | { kind: "bad-response"; detail: string }
   | { kind: "unreachable" };
-
-// Server-side only: inside Docker the backend is reached on the compose network.
-const backendUrl = () => process.env.BACKEND_URL ?? "http://localhost:5088";
 
 // A backend that hangs counts as unreachable instead of hanging the page.
 // Kept above the 3 s the backend allows its own database check.

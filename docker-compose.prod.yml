@@ -14,6 +14,7 @@ services:
   backend:
     environment:
       ConnectionStrings__Quiz: "Server=sqlserver,1433;Database=MasterclassQuiz;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};TrustServerCertificate=True"
+      HOST_PASSWORD_HASH: ${HOST_PASSWORD_HASH:?Set HOST_PASSWORD_HASH in .env}
     ports: !reset []
     restart: unless-stopped
 
