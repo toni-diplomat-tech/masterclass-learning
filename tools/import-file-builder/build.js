@@ -23,7 +23,13 @@ export function buildImportFile(configPath) {
       lessons: lessonsIn(join(courseFolder, folder.name), folder, config, problems),
     }));
 
-  return { file: { course: config.course, workshops }, problems };
+  const questionsFolder = resolve(dirname(configPath), config.questionsFolder);
+  const questions = readdirSync(questionsFolder)
+    .filter((name) => name.endsWith(".json"))
+    .sort()
+    .flatMap((name) => JSON.parse(readFileSync(join(questionsFolder, name), "utf8")));
+
+  return { file: { course: config.course, workshops, questions }, problems };
 }
 
 function lessonsIn(path, workshopFolder, config, problems) {

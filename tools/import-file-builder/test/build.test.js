@@ -16,3 +16,10 @@ test("numbered folders become Workshops and numbered .md files become Lessons, i
   assert.deepEqual(file.course, documentedExample.course);
   assert.deepEqual(file.workshops, documentedExample.workshops);
 });
+
+test("Questions come from every Question file, in file name order, so the output is the documented example the backend imports", () => {
+  const { file, problems } = buildImportFile(fixture);
+
+  assert.deepEqual(problems, []);
+  assert.deepEqual(file, documentedExample);
+});
