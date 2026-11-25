@@ -1,0 +1,11 @@
+{
+  "name": "import-file-builder",
+  "private": true,
+  "description": "Builds a Course import file from a course folder and Question files.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "bin": { "build-import-file": "./build-import-file.js" },
+  "scripts": {
+    "test": "node --test"
+  }
+}

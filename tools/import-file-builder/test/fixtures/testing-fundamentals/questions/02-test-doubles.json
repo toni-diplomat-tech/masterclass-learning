@@ -1,0 +1,13 @@
+[
+  {
+    "id": "test-doubles-001",
+    "lesson": "stubs-and-mocks",
+    "difficulty": "Easy",
+    "text": "What does a stub do?",
+    "options": [
+      { "text": "Returns canned answers to calls made during the test", "correct": true },
+      { "text": "Records calls so the test can verify them", "correct": false },
+      { "text": "Replaces the test runner", "correct": false }
+    ]
+  }
+]
