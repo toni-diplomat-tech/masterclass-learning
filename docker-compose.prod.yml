@@ -1,6 +1,6 @@
 # Production override for the VPS, layered on docker-compose.yml.
 # The server's .env sets COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml, so a plain
-# `docker compose up -d` there runs both files (see deploy/README.md).
+# `docker compose up -d` there runs both files (see "Deploy" in README.md).
 # Secrets have no defaults here: compose refuses to start while one is missing from .env.
 
 services:
