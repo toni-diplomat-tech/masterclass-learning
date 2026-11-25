@@ -22,7 +22,7 @@ public sealed class RestartRecoveryTests(SqlServerFixture sqlServer)
         {
             TimeLimitSeconds = new TimeLimitSeconds { Easy = 1 },
         });
-        var meeting = await MeetingFixture.StartAsync(engine, participants: 1, easy: 2);
+        var meeting = await RunningSessionFixture.StartAsync(engine, participants: 1, easy: 2);
         await Task.Delay(TimeSpan.FromSeconds(1.6)); // past the first Question's deadline and grace
 
         using var restarted = new BackendFactory(sqlServer, HostPassword.Hash(HostClient.Password))
@@ -41,7 +41,7 @@ public sealed class RestartRecoveryTests(SqlServerFixture sqlServer)
     }
 
     // Polls the Masterclass's state until it matches (the backend timer moves it on in the background).
-    private static async Task<CurrentState> WaitForAsync(QuizEngine engine, MeetingFixture meeting, Func<CurrentState, bool> reached)
+    private static async Task<CurrentState> WaitForAsync(QuizEngine engine, RunningSessionFixture meeting, Func<CurrentState, bool> reached)
     {
         using var timeout = new CancellationTokenSource(Timeout);
         while (true)

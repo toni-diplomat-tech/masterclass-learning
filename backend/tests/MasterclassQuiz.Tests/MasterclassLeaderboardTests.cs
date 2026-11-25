@@ -20,7 +20,7 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_masterclass_leaderboard_sums_every_session_and_ties_share_a_rank()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 3, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 3, easy: 1);
         var (first, second, third) = (meeting.Tokens[0], meeting.Tokens[1], meeting.Tokens[2]);
 
         // Session 1: first 500 (at once), second 375 (after 1.5 s), third 0 (wrong).
@@ -54,7 +54,7 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Points_count_on_the_masterclass_leaderboard_only_once_revealed()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
 
         Assert.Empty((await Engine.GetMasterclassLeaderboardAsync(meeting.MasterclassId))!.Entries);

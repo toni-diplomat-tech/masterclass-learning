@@ -8,9 +8,9 @@ namespace MasterclassQuiz.Tests;
 /// "unit-tests" Workshop Session runs the given mix (in every Question, option 1 is the correct one).
 /// <see cref="ImportFile"/> is the Course's import file, to edit and import again.
 /// </summary>
-public sealed record MeetingFixture(int MasterclassId, string JoinCode, int SessionId, IReadOnlyList<string> Tokens, IReadOnlyList<SessionQuestion> Questions, QuestionStarted Question, JsonObject ImportFile)
+public sealed record RunningSessionFixture(int MasterclassId, string JoinCode, int SessionId, IReadOnlyList<string> Tokens, IReadOnlyList<SessionQuestion> Questions, QuestionStarted Question, JsonObject ImportFile)
 {
-    public static async Task<MeetingFixture> StartAsync(QuizEngine engine, int participants, int easy, int medium = 0, int hard = 0)
+    public static async Task<RunningSessionFixture> StartAsync(QuizEngine engine, int participants, int easy, int medium = 0, int hard = 0)
     {
         var file = SessionFiles.WithWorkshopQuestions(easy, medium, hard);
         var import = await engine.ImportCourseAsync(file.ToJsonString());
@@ -29,6 +29,6 @@ public sealed record MeetingFixture(int MasterclassId, string JoinCode, int Sess
 
         var started = await engine.StartSessionAsync(opened!.Id, workshopId, new DifficultyCounts(easy, medium, hard));
         Assert.Empty(started.Problems);
-        return new MeetingFixture(opened.Id, opened.JoinCode!, started.Session!.Id, tokens, started.Session.Questions, started.Session.FirstQuestion, file);
+        return new RunningSessionFixture(opened.Id, opened.JoinCode!, started.Session!.Id, tokens, started.Session.Questions, started.Session.FirstQuestion, file);
     }
 }

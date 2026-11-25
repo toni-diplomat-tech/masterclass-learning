@@ -40,7 +40,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_running_question_comes_back_with_its_deadline_and_answer_count()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 3, easy: 2);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 3, easy: 2);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 2);
         _time.Advance(TimeSpan.FromSeconds(1));
 
@@ -57,7 +57,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_participant_who_already_answered_gets_their_option_back_but_not_its_outcome()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 2);
 
         var answered = (await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0]))!.Participant!;
@@ -70,7 +70,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_participant_who_joined_during_the_question_cannot_answer_it()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromSeconds(1));
         var late = (await Engine.JoinMasterclassAsync(meeting.JoinCode, null))!;
 
@@ -82,8 +82,8 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_participant_of_another_masterclass_gets_no_participant_state()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
-        var other = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var other = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
 
         var state = await Engine.GetCurrentStateAsync(meeting.MasterclassId, other.Tokens[0]);
 
@@ -94,7 +94,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_revealed_question_comes_back_with_each_participants_outcome()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 3, easy: 2);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 3, easy: 2);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 3);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
@@ -120,7 +120,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_revealed_question_comes_back_with_the_session_leaderboard_and_each_participants_standing()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 3, easy: 2);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 3, easy: 2);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1); // at once: 500 points
         await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 3);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
@@ -144,7 +144,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_running_question_comes_back_without_a_leaderboard()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
 
         var state = (await Engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0]))!;
@@ -155,7 +155,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Session_over_comes_back_with_the_final_leaderboard_and_the_participants_rank()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
         await Engine.RevealQuestionAsync(meeting.SessionId);
@@ -173,7 +173,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_next_question_follows_the_reveal_pause()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 2);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(meeting.SessionId);
         _time.Advance(TimeSpan.FromSeconds(2));
@@ -188,7 +188,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task After_the_session_ends_everyone_sees_session_over()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(meeting.SessionId);
         _time.Advance(TimeSpan.FromSeconds(2));
@@ -203,7 +203,7 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_closed_masterclass_says_so_to_screens_that_missed_the_close()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(meeting.SessionId);
         _time.Advance(TimeSpan.FromSeconds(2));
@@ -220,8 +220,8 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Running_sessions_are_listed_until_they_end()
     {
-        var running = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
-        var ending = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var running = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var ending = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(ending.Tokens[0], ending.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(ending.SessionId);
         var revealedOnly = await Engine.ListRunningSessionsAsync();

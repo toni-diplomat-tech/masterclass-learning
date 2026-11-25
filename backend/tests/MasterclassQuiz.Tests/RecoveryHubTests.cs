@@ -32,7 +32,7 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_reloaded_phone_gets_the_running_question_and_its_locked_answer_but_not_the_correct_option()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         var cookie = $"{ParticipantEndpoints.CookieName}={meeting.Tokens[0]}";
         await using (var before = await ConnectedAsync(cookie))
         {
@@ -53,7 +53,7 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_reloaded_projector_gets_the_running_question_with_its_answer_count()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
         await using var projector = await ConnectedAsync(await HostCookieAsync());
 
@@ -67,8 +67,8 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_stranger_gets_no_state_and_cannot_resume()
     {
-        var meeting = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
-        var other = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var other = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await using var stranger = await ConnectedAsync(cookie: null);
         await using var otherPhone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={other.Tokens[0]}");
         await using var phone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={meeting.Tokens[0]}");
@@ -83,7 +83,7 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     {
         // Started straight through the engine, with a 1 s limit: no backend timer follows this Session.
         var engine = new QuizEngine(sqlServer.Connection, TimeProvider.System, settings: new QuizSettings { TimeLimitSeconds = new TimeLimitSeconds { Easy = 1 } });
-        var meeting = await MeetingFixture.StartAsync(engine, participants: 1, easy: 2);
+        var meeting = await RunningSessionFixture.StartAsync(engine, participants: 1, easy: 2);
         await Task.Delay(TimeSpan.FromSeconds(1.6)); // past the deadline and grace
         await using var phone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={meeting.Tokens[0]}");
         var onPhone = Listen(phone, "QuestionRevealed");
