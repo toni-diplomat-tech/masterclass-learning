@@ -40,6 +40,57 @@ test("a Question naming an unknown Lesson slug is reported", () => {
   assert.deepEqual(problems, ['unit-tests.json: Question "unit-tests-002" names Lesson "why-we-tset", which is not in the course folder.']);
 });
 
+test("a Lesson without a heading is reported, since it has no title", () => {
+  const config = buildConfig({ "course/01-unit-tests/01-why-we-test.md": "Tests catch regressions.\n" });
+
+  const { problems } = buildImportFile(config);
+
+  assert.deepEqual(problems, ["01-unit-tests/01-why-we-test.md: no heading to use as the Lesson title."]);
+});
+
+test("two Lessons with the same slug are reported, since Questions name a Lesson by slug alone", () => {
+  const config = buildConfig({
+    "course/01-unit-tests/03-q-and-a.md": "# Q&A\n",
+    "course/02-test-doubles/04-q-and-a.md": "# Q&A\n",
+  });
+
+  const { problems } = buildImportFile(config);
+
+  assert.deepEqual(problems, [
+    '02-test-doubles/04-q-and-a.md: Lesson slug "q-and-a" is already used by 01-unit-tests/03-q-and-a.md. Rename one of the files.',
+  ]);
+});
+
+test("a solution file with no Lesson before it is reported", () => {
+  const config = buildConfig({ "course/01-unit-tests/01-why-we-test-solution.md": "# Why we test: solution\n" });
+
+  const { problems } = buildImportFile(config);
+
+  assert.deepEqual(problems, ["01-unit-tests/01-why-we-test-solution.md: a solution file needs a Lesson before it to merge into."]);
+});
+
+test("an excluded folder that is not in the course folder is reported, since it is probably a typo", () => {
+  const config = buildConfig({ "course/01-unit-tests/01-why-we-test.md": "# Why we test\n" }, { exclude: ["03-ofice-hours"] });
+
+  const { problems } = buildImportFile(config);
+
+  assert.deepEqual(problems, ['Excluded folder "03-ofice-hours" is not in the course folder.']);
+});
+
+test("a Question file that is not a JSON array is reported", () => {
+  const config = buildConfig({
+    "course/01-unit-tests/01-why-we-test.md": "# Why we test\n",
+    "questions/broken.json": '[{ "id": "unit-tests-001", }]',
+    "questions/object.json": JSON.stringify(question("unit-tests-002", "why-we-test")),
+  });
+
+  const { problems } = buildImportFile(config);
+
+  assert.equal(problems.length, 2);
+  assert.match(problems[0], /^broken\.json: not valid JSON/);
+  assert.equal(problems[1], "object.json: must be a JSON array of Questions.");
+});
+
 /** Writes a course folder and Question files into a temporary folder; returns the build config's path. */
 function buildConfig(files, config = {}) {
   const root = mkdtempSync(join(tmpdir(), "import-file-builder-"));
