@@ -19,14 +19,14 @@ public static class DatabaseMigrator
 
         var migrations = Run(DeployChanges.To
             .SqlDatabase(connectionString)
-            .WithScriptsFromFileSystem(ScriptFolder(scriptsDirectory, "migrations"))
+            .WithScripts(ScriptsIn(scriptsDirectory, "migrations"))
             .WithTransactionPerScript()
             .LogToConsole()
             .Build());
 
         var procedures = Run(DeployChanges.To
             .SqlDatabase(connectionString)
-            .WithScriptsFromFileSystem(ScriptFolder(scriptsDirectory, "procedures"))
+            .WithScripts(ScriptsIn(scriptsDirectory, "procedures"))
             .JournalTo(new NullJournal())
             .WithTransactionPerScript()
             .LogToConsole()
@@ -37,9 +37,14 @@ public static class DatabaseMigrator
             procedures.Scripts.Select(s => s.Name).ToList());
     }
 
-    // A folder with no scripts yet is not copied to the build output, so create it rather than fail.
-    private static string ScriptFolder(string scriptsDirectory, string name) =>
-        Directory.CreateDirectory(Path.Combine(scriptsDirectory, name)).FullName;
+    // A folder with no scripts yet is not copied to the build output, so treat a missing folder as empty.
+    private static IEnumerable<SqlScript> ScriptsIn(string scriptsDirectory, string folder)
+    {
+        var path = Path.Combine(scriptsDirectory, folder);
+        return Directory.Exists(path)
+            ? Directory.GetFiles(path, "*.sql").Select(file => new SqlScript(Path.GetFileName(file), File.ReadAllText(file)))
+            : [];
+    }
 
     private static DatabaseUpgradeResult Run(UpgradeEngine upgrader)
     {
