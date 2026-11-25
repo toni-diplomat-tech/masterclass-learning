@@ -33,6 +33,22 @@ public sealed partial class QuizEngine
         }
     }
 
+    /// <summary>
+    /// The Sessions that haven't ended, which the backend timer must follow (e.g. again after a restart);
+    /// only <paramref name="masterclassId"/>'s when given.
+    /// </summary>
+    public async Task<IReadOnlyList<int>> ListRunningSessionsAsync(int? masterclassId = null, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("MasterclassId", masterclassId);
+        await using var connection = new SqlConnection(database.ConnectionString);
+        return (await connection.QueryAsync<int>(new CommandDefinition(
+            "dbo.ListRunningSessions",
+            parameters,
+            commandType: CommandType.StoredProcedure,
+            cancellationToken: cancellationToken))).ToList();
+    }
+
     private async Task<CurrentStateRow?> ReadCurrentStateAsync(int masterclassId, string? participantToken, CancellationToken cancellationToken)
     {
         var parameters = new DynamicParameters();

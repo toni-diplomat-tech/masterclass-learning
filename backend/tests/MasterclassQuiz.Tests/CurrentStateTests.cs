@@ -148,6 +148,26 @@ public sealed class CurrentStateTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task Running_sessions_are_listed_until_they_end()
+    {
+        var running = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var ending = await MeetingFixture.StartAsync(Engine, participants: 1, easy: 1);
+        await Engine.SubmitAnswerAsync(ending.Tokens[0], ending.Question.QuestionId, 1);
+        await Engine.RevealQuestionAsync(ending.SessionId);
+        var revealedOnly = await Engine.ListRunningSessionsAsync();
+        _time.Advance(TimeSpan.FromSeconds(2));
+        await Engine.AdvanceSessionAsync(ending.SessionId);
+
+        var afterEnd = await Engine.ListRunningSessionsAsync();
+
+        Assert.Contains(running.SessionId, revealedOnly);
+        Assert.Contains(ending.SessionId, revealedOnly);
+        Assert.Contains(running.SessionId, afterEnd);
+        Assert.DoesNotContain(ending.SessionId, afterEnd);
+        Assert.Equal([running.SessionId], await Engine.ListRunningSessionsAsync(running.MasterclassId));
+    }
+
+    [Fact]
     public async Task There_is_no_state_for_an_unknown_masterclass()
     {
         Assert.Null(await Engine.GetCurrentStateAsync(int.MaxValue, participantToken: null));
