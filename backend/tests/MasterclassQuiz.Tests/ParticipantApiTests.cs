@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using MasterclassQuiz.Api.HostAuth;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace MasterclassQuiz.Tests;
 
@@ -70,33 +71,32 @@ public sealed class ParticipantApiTests(SqlServerFixture sqlServer) : IDisposabl
     }
 
     [Fact]
-    public async Task A_participant_gets_their_place_on_the_masterclass_leaderboard()
+    public async Task A_participant_gets_their_rank_on_the_masterclass_leaderboard()
     {
         var (id, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app), sqlServer.Connection);
         var phone = _app.CreateClient();
         var join = await phone.PostAsJsonAsync("/api/participants/join", new { joinCode });
         var token = Assert.Single(join.Headers.GetValues("Set-Cookie"), c => c.StartsWith("mq_participant="))
             .Split(';')[0]["mq_participant=".Length..];
-        Assert.Equal(HttpStatusCode.NotFound, (await phone.GetAsync("/api/participants/me/place")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await phone.GetAsync("/api/participants/me/rank")).StatusCode);
 
-        // The only Participant answers the first Workshop's one Question correctly; it is revealed at once.
-        var engine = new QuizEngine(sqlServer.Connection, TimeProvider.System);
-        var courseId = (await engine.GetMasterclassAsync(id))!.CourseId;
-        var workshopId = (await engine.ListCoursesAsync()).Single(c => c.Id == courseId).Workshops.Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
+        // The only Participant answers the first Workshop's one Easy Question correctly the moment it starts
+        // (the clock stands still), so it scores the full 500; it is revealed at once.
+        var engine = new QuizEngine(sqlServer.Connection, new FakeTimeProvider(TimeProvider.System.GetUtcNow()));
+        var workshopId = await engine.WorkshopIdAsync(id, SessionFiles.WorkshopSlug);
         var started = await engine.StartSessionAsync(id, workshopId, new DifficultyCounts(1, 0, 0));
         Assert.Equal(AnswerResult.Accepted, (await engine.SubmitAnswerAsync(token, started.Session!.FirstQuestion.QuestionId, 1)).Result);
         Assert.NotNull(await engine.RevealQuestionAsync(started.Session.Id));
 
-        var place = await phone.GetFromJsonAsync<JsonObject>("/api/participants/me/place");
+        var rank = await phone.GetFromJsonAsync<JsonObject>("/api/participants/me/rank");
 
-        Assert.Equal((1, 1), ((int)place!["rank"]!, (int)place["of"]!));
-        Assert.InRange((int)place["points"]!, 1, 500);
+        Assert.Equal((1, 500, 1), ((int)rank!["rank"]!, (int)rank["points"]!, (int)rank["of"]!));
     }
 
     [Fact]
-    public async Task Without_a_known_cookie_there_is_no_place()
+    public async Task Without_a_known_cookie_there_is_no_rank()
     {
-        Assert.Equal(HttpStatusCode.Unauthorized, (await _app.CreateClient().GetAsync("/api/participants/me/place")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _app.CreateClient().GetAsync("/api/participants/me/rank")).StatusCode);
     }
 
     public void Dispose() => _app.Dispose();
