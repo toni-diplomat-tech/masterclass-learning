@@ -42,8 +42,8 @@ export function StartSessionDialog({
   onStart: (workshopId: number, mix: DifficultyCounts) => Promise<string[]>;
 }) {
   const progress = workshopProgress(workshops, nextWorkshopId, workshopIdsWithSession);
-  const workshop = progress.find((p) => p.step === "next")?.workshop;
-  const [mix, setMix] = useState(() => suggestedMix(workshop));
+  const nextWorkshop = progress.find((p) => p.step === "next")?.workshop;
+  const [mix, setMix] = useState(() => suggestedMix(nextWorkshop));
   const [problems, setProblems] = useState<string[]>([]);
   const [starting, setStarting] = useState(false);
 
@@ -51,10 +51,10 @@ export function StartSessionDialog({
 
   const courseProgress = (
     <ol data-testid="workshop-progress" className={styles.workshops}>
-      {progress.map(({ workshop: w, step }) => (
-        <li key={w.id} data-step={step} className={styles[step]}>
+      {progress.map(({ workshop, step }) => (
+        <li key={workshop.id} data-step={step} className={styles[step]}>
           <span>
-            {w.number}. {w.title}
+            {workshop.number}. {workshop.title}
           </span>
           <span className={styles.step}>{STEP_LABELS[step]}</span>
         </li>
@@ -62,7 +62,7 @@ export function StartSessionDialog({
     </ol>
   );
 
-  if (!workshop) {
+  if (!nextWorkshop) {
     return (
       <Card glass className={styles.dialog}>
         <div className={styles.dialogForm}>
@@ -73,7 +73,7 @@ export function StartSessionDialog({
     );
   }
 
-  const available = workshop.questions.easy + workshop.questions.medium + workshop.questions.hard;
+  const available = nextWorkshop.questions.easy + nextWorkshop.questions.medium + nextWorkshop.questions.hard;
   const total = mix.easy + mix.medium + mix.hard;
   const blocked =
     total > available
@@ -87,7 +87,7 @@ export function StartSessionDialog({
     if (blocked) return;
     setStarting(true);
     try {
-      setProblems(await onStart(workshop.id, mix));
+      setProblems(await onStart(nextWorkshop.id, mix));
     } catch {
       setProblems(["The Session could not be started. Try again."]);
     } finally {
@@ -99,7 +99,7 @@ export function StartSessionDialog({
     <Card glass className={styles.dialog}>
       <form onSubmit={submit} data-testid="start-session" className={styles.dialogForm}>
         <h2>
-          Start the Session for {workshop.number}. {workshop.title}
+          Start the Session for {nextWorkshop.number}. {nextWorkshop.title}
         </h2>
         {courseProgress}
         <table>
@@ -119,7 +119,7 @@ export function StartSessionDialog({
               <tr key={key}>
                 <th scope="row">{label}</th>
                 <td data-testid={`available-${key}`} className={styles.num}>
-                  {workshop.questions[key]}
+                  {nextWorkshop.questions[key]}
                 </td>
                 <td className={styles.num}>
                   <input
