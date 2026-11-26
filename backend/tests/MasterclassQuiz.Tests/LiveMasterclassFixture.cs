@@ -1,3 +1,4 @@
+using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.Extensions.Hosting;
@@ -16,9 +17,10 @@ public sealed class LiveMasterclassFixture : IDisposable
 
     private readonly TestLifetime _lifetime = new();
 
-    public LiveMasterclassFixture(SqlServerFixture sqlServer, QuizSettings? settings = null)
+    /// <param name="database">Another database on the test server to use instead of the shared one.</param>
+    public LiveMasterclassFixture(SqlServerFixture sqlServer, QuizSettings? settings = null, DatabaseConnection? database = null)
     {
-        Engine = new QuizEngine(sqlServer.Connection, Time, settings: settings);
+        Engine = new QuizEngine(database ?? sqlServer.Connection, Time, settings: settings);
         Live = new LiveMasterclass(Engine, Broadcasts, Time, _lifetime, NullLogger<LiveMasterclass>.Instance);
     }
 

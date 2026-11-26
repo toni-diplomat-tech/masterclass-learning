@@ -26,14 +26,23 @@ internal sealed class SessionRunner(
 
     /// <summary>
     /// Runs the Session until it ends, in the background. Following a Session that is already followed
-    /// does nothing, so it is safe to call again (e.g. when resuming Sessions after a restart).
+    /// does nothing and allocates nothing, so it is safe to call again (Resume, or Resume racing startup
+    /// recovery).
     /// </summary>
     public void Follow(int sessionId)
     {
+        if (_followed.ContainsKey(sessionId))
+        {
+            return;
+        }
         var wake = new SemaphoreSlim(0);
         if (_followed.TryAdd(sessionId, wake))
         {
             _ = Task.Run(() => RunAsync(sessionId, wake, lifetime.ApplicationStopping));
+        }
+        else
+        {
+            wake.Dispose(); // lost a race with another Follow of the same Session
         }
     }
 
