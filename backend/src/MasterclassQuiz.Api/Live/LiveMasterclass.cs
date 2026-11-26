@@ -64,12 +64,6 @@ public sealed class LiveMasterclass(
     }
 
     /// <summary>
-    /// Makes the backend timer check a followed Session now.
-    /// Transitional: Resume calls it until it becomes a module operation.
-    /// </summary>
-    public void WakeSession(int sessionId) => _timer.Wake(sessionId);
-
-    /// <summary>
     /// Closes the Masterclass and, when this call closed it, broadcasts <see cref="QuizHub.MasterclassClosed"/>
     /// to it. Returns the engine's result: no Masterclass when there is none, problems when the close was
     /// refused. Closing a Closed Masterclass again succeeds but changes nothing, so it broadcasts nothing.
