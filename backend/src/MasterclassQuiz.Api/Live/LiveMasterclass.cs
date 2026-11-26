@@ -26,4 +26,25 @@ public sealed class LiveMasterclass(QuizEngine engine, IMasterclassBroadcasts br
         }
         return result;
     }
+
+    /// <summary>
+    /// Joins the Open Masterclass with this Join code (or gives a browser whose
+    /// <paramref name="currentToken"/> already joined it its Participant back) and broadcasts
+    /// <see cref="QuizHub.ParticipantCountUpdated"/> with the Masterclass's new Participant count.
+    /// Null, broadcasting nothing, when no Open Masterclass has this Join code.
+    /// </summary>
+    public async Task<ParticipantJoin?> JoinMasterclassAsync(string joinCode, string? currentToken, CancellationToken cancellationToken = default)
+    {
+        var joined = await engine.JoinMasterclassAsync(joinCode, currentToken, cancellationToken);
+        if (joined is null)
+        {
+            return null;
+        }
+        var masterclassId = joined.Participant.MasterclassId;
+        if (await engine.GetMasterclassAsync(masterclassId, lifetime.ApplicationStopping) is { } masterclass)
+        {
+            await broadcasts.ParticipantCountUpdatedAsync(new ParticipantCount(masterclassId, masterclass.Participants), lifetime.ApplicationStopping);
+        }
+        return joined;
+    }
 }

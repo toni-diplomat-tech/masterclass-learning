@@ -4,8 +4,9 @@ using MasterclassQuiz.Api.Quiz;
 namespace MasterclassQuiz.Api.Participants;
 
 /// <summary>
-/// Joining a Masterclass from a phone: thin callers of the Quiz engine. A Participant is remembered by an
-/// HTTP-only cookie holding their random token; there are no accounts.
+/// Joining a Masterclass from a phone: thin callers of the live Masterclass module (join) and the Quiz
+/// engine (reads). A Participant is remembered by an HTTP-only cookie holding their random token; there
+/// are no accounts.
 /// </summary>
 public static class ParticipantEndpoints
 {
@@ -24,9 +25,9 @@ public static class ParticipantEndpoints
     {
         var participants = app.MapGroup("/api/participants");
 
-        participants.MapPost("/join", async (JoinRequest request, HttpContext context, QuizEngine engine, ParticipantNotifier notifier, CancellationToken cancellationToken) =>
+        participants.MapPost("/join", async (JoinRequest request, HttpContext context, LiveMasterclass live, CancellationToken cancellationToken) =>
         {
-            var joined = await engine.JoinMasterclassAsync(request.JoinCode ?? "", context.Request.Cookies[CookieName], cancellationToken);
+            var joined = await live.JoinMasterclassAsync(request.JoinCode ?? "", context.Request.Cookies[CookieName], cancellationToken);
             if (joined is null)
             {
                 return Results.Problem(title: "No open Masterclass has this Join code.", statusCode: StatusCodes.Status404NotFound);
@@ -40,7 +41,6 @@ public static class ParticipantEndpoints
                 Path = "/",
                 MaxAge = CookieLifetime,
             });
-            await notifier.ParticipantJoinedAsync(joined.Participant.MasterclassId, cancellationToken);
             return Results.Ok(joined.Participant);
         });
 
