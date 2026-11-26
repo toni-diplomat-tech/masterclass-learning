@@ -34,23 +34,23 @@ export async function joinMasterclass(joinCode: string): Promise<JoinResult> {
   return { kind: "joined", participant: await response.json(), cookie };
 }
 
-/** A Participant's place on their Masterclass leaderboard: rank and points, out of everyone on it. */
-export type MasterclassPlace = { rank: number; points: number; of: number };
+/** A Participant's rank on their Masterclass leaderboard: rank and points, out of everyone on it. */
+export type MasterclassRank = { rank: number; points: number; of: number };
 
 /**
- * This browser's Participant's place on their Masterclass leaderboard, or null when they are not on it
+ * This browser's Participant's rank on their Masterclass leaderboard, or null when they are not on it
  * (no Answer to a revealed Question) or the browser has no known Participant.
  */
-export async function currentMasterclassPlace(): Promise<MasterclassPlace | null> {
+export async function currentMasterclassRank(): Promise<MasterclassRank | null> {
   const headers = await participantCookieHeader();
   if (!headers.cookie) return null;
-  const response = await fetch(`${backendUrl()}/api/participants/me/place`, {
+  const response = await fetch(`${backendUrl()}/api/participants/me/rank`, {
     headers,
     cache: "no-store",
     signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
   });
   if (response.status === 401 || response.status === 404) return null;
-  if (!response.ok) throw new Error(`Loading the Masterclass place failed: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Loading the Masterclass rank failed: HTTP ${response.status}`);
   return response.json();
 }
 
