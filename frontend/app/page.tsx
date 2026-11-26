@@ -3,6 +3,7 @@ import { Page } from "@/components/page";
 import { JoinForm } from "./join-form";
 import styles from "./participant.module.scss";
 
+// A phone already in a Masterclass Open never sees this: proxy.ts redirects it to /play first.
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <Page width="phone">
