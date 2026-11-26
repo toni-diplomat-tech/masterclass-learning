@@ -1,27 +1,15 @@
 import { cookies } from "next/headers";
 import { backendUrl } from "./backend";
-import type { MasterclassStatus } from "./domain";
+import { BACKEND_TIMEOUT_MS, PARTICIPANT_COOKIE, type Participant, participantByToken } from "./participant-cookie";
 import { readSetCookie } from "./set-cookie";
 
 // Server-side only: joining a Masterclass and recognizing the Participant by their cookie.
 
-/** The backend's Participant cookie (ParticipantEndpoints.CookieName): HTTP-only, holds a random token. */
-export const PARTICIPANT_COOKIE = "mq_participant";
-
-export type Participant = {
-  id: number;
-  masterclassId: number;
-  masterclassName: string;
-  masterclassStatus: MasterclassStatus;
-  nickname: string;
-  joinedAt: string;
-};
+export { PARTICIPANT_COOKIE, type Participant };
 
 export type JoinResult =
   | { kind: "joined"; participant: Participant; cookie: { value: string; expires?: Date } }
   | { kind: "refused" };
-
-const BACKEND_TIMEOUT_MS = 5000;
 
 async function participantCookieHeader(): Promise<Record<string, string>> {
   const token = (await cookies()).get(PARTICIPANT_COOKIE)?.value;
@@ -46,24 +34,8 @@ export async function joinMasterclass(joinCode: string): Promise<JoinResult> {
   return { kind: "joined", participant: await response.json(), cookie };
 }
 
-/**
- * Whether this phone belongs on /play rather than the Join code form: it has joined a Masterclass that
- * is still Masterclass Open. A Masterclass Closed lets its Participants join another one from `/`.
- */
-export function belongsOnPlay(participant: Participant | null): boolean {
-  return participant?.masterclassStatus === "Open";
-}
-
 /** The Participant this browser's cookie belongs to, or null if it has none (or an unknown one). */
 export async function currentParticipant(): Promise<Participant | null> {
-  const cookie = await participantCookieHeader();
-  if (!cookie.cookie) return null;
-  const response = await fetch(`${backendUrl()}/api/participants/me`, {
-    headers: cookie,
-    cache: "no-store",
-    signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
-  });
-  if (response.status === 401) return null;
-  if (!response.ok) throw new Error(`Loading the Participant failed: HTTP ${response.status}`);
-  return response.json();
+  const token = (await cookies()).get(PARTICIPANT_COOKIE)?.value;
+  return token ? participantByToken(token) : null;
 }

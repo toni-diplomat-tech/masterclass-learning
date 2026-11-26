@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Eyebrow, Page, Stack } from "@/components/page";
 import { currentParticipant } from "@/lib/participant";
+import { inMasterclassOpen } from "@/lib/participant-cookie";
 import { currentRecapToken } from "@/lib/recaps";
 import styles from "../participant.module.scss";
 import { LiveParticipant } from "./live-participant";
@@ -35,13 +36,13 @@ async function ParticipantScreen() {
           {participant.nickname}
         </h1>
       </div>
-      {participant.masterclassStatus === "Closed" ? (
+      {inMasterclassOpen(participant) ? (
+        <LiveParticipant masterclassId={participant.masterclassId} recapToken={recapToken} />
+      ) : (
         <Stack>
           <p className={styles.waiting}>This Masterclass has ended.</p>
           <RecapLink recapToken={recapToken} />
         </Stack>
-      ) : (
-        <LiveParticipant masterclassId={participant.masterclassId} recapToken={recapToken} />
       )}
     </Stack>
   );
