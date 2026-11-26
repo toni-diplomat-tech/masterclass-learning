@@ -146,8 +146,8 @@
   gap: $space-4;
 }
 
-// The Course's Workshops in the start-Session dialog: done and locked ones muted, the Next Workshop raised
-// on a red edge.
+// The Course's Workshops in the start-Session dialog, each a Notice: done on a green edge, the Next
+// Workshop on a red one, locked on a grey one.
 .workshops {
   display: flex;
   flex-direction: column;
@@ -157,31 +157,11 @@
   list-style: none;
 }
 
-.done,
-.next,
-.locked {
+.workshop {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: $space-3;
-  padding: $space-2 $space-3;
-  border-left: 3px solid transparent;
-  border-radius: $radius-sm;
-}
-
-.done,
-.locked {
-  color: var(--color-text-muted);
-}
-
-.next {
-  background: var(--color-surface-2);
-  border-left-color: var(--color-primary);
-  font-weight: $font-weight-bold;
-}
-
-.step {
-  font-size: $font-size-sm;
-  text-transform: uppercase;
 }
 
 .mixInput {

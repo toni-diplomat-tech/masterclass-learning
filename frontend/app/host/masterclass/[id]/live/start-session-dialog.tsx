@@ -3,7 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/button";
 import { Card } from "@/components/card";
-import { Notice } from "@/components/notice";
+import { Notice, type NoticeTone } from "@/components/notice";
+import { Eyebrow } from "@/components/page";
 import type { WorkshopOverview } from "@/lib/courses";
 import type { DifficultyCounts } from "@/lib/domain";
 import { workshopProgress, type WorkshopStep } from "@/lib/workshop-progress";
@@ -16,6 +17,7 @@ const DIFFICULTIES = [
 ] as const;
 
 const STEP_LABELS: Record<WorkshopStep, string> = { done: "Done", next: "Next", locked: "Locked" };
+const STEP_TONES: Record<WorkshopStep, NoticeTone> = { done: "success", next: "primary", locked: "info" };
 
 function suggestedMix(workshop: WorkshopOverview | undefined): DifficultyCounts {
   const counts = workshop?.questions ?? { easy: 0, medium: 0, hard: 0 };
@@ -52,11 +54,19 @@ export function StartSessionDialog({
   const courseProgress = (
     <ol data-testid="workshop-progress" className={styles.workshops}>
       {progress.map(({ workshop, step }) => (
-        <li key={workshop.id} data-step={step} className={styles[step]}>
-          <span>
-            {workshop.number}. {workshop.title}
-          </span>
-          <span className={styles.step}>{STEP_LABELS[step]}</span>
+        <li key={workshop.id} data-step={step}>
+          <Notice tone={STEP_TONES[step]} className={styles.workshop}>
+            {step === "next" ? (
+              <strong>
+                {workshop.number}. {workshop.title}
+              </strong>
+            ) : (
+              <span>
+                {workshop.number}. {workshop.title}
+              </span>
+            )}
+            <Eyebrow>{STEP_LABELS[step]}</Eyebrow>
+          </Notice>
         </li>
       ))}
     </ol>
