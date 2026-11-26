@@ -43,6 +43,9 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
     /// </summary>
     public const string LeaderboardUpdated = nameof(LeaderboardUpdated);
 
+    /// <summary>Server → clients: <c>{ masterclassId }</c> once the Host has closed the Masterclass.</summary>
+    public const string MasterclassClosed = nameof(MasterclassClosed);
+
     public static string MasterclassGroup(int masterclassId) => $"masterclass-{masterclassId}";
 
     /// <summary>
