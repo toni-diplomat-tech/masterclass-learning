@@ -35,10 +35,8 @@ builder.Services.AddSingleton(QuizSettingsFrom(builder.Configuration));
 builder.Services.AddSingleton<QuizEngine>();
 builder.Services.AddHostSession();
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<SessionNotifier>();
 builder.Services.AddSingleton<IMasterclassBroadcasts, SignalRBroadcasts>();
 builder.Services.AddSingleton<LiveMasterclass>();
-builder.Services.AddSingleton<SessionRunner>();
 if (builder.Configuration.GetValue(SessionRecovery.EnabledKey, defaultValue: true))
 {
     builder.Services.AddHostedService<SessionRecovery>();

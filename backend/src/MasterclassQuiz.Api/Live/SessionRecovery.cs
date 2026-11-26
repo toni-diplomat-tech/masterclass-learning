@@ -8,7 +8,7 @@ namespace MasterclassQuiz.Api.Live;
 /// carries on. Retries until the database answers. Configuration <see cref="EnabledKey"/> (default true)
 /// turns it off, e.g. for tests that share one database.
 /// </summary>
-public sealed class SessionRecovery(QuizEngine engine, SessionRunner runner, ILogger<SessionRecovery> logger) : BackgroundService
+public sealed class SessionRecovery(QuizEngine engine, LiveMasterclass live, ILogger<SessionRecovery> logger) : BackgroundService
 {
     public const string EnabledKey = "Live:ResumeSessionsOnStartup";
 
@@ -23,7 +23,7 @@ public sealed class SessionRecovery(QuizEngine engine, SessionRunner runner, ILo
                 var sessions = await engine.ListRunningSessionsAsync(cancellationToken: stoppingToken);
                 foreach (var sessionId in sessions)
                 {
-                    runner.Follow(sessionId);
+                    live.FollowSession(sessionId);
                 }
                 if (sessions.Count > 0)
                 {

@@ -1,7 +1,7 @@
 using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MasterclassQuiz.Tests;
 
@@ -19,11 +19,14 @@ public sealed class LiveMasterclassFixture : IDisposable
     public LiveMasterclassFixture(SqlServerFixture sqlServer, QuizSettings? settings = null)
     {
         Engine = new QuizEngine(sqlServer.Connection, Time, settings: settings);
-        Live = new LiveMasterclass(Engine, Broadcasts, _lifetime);
+        Live = new LiveMasterclass(Engine, Broadcasts, Time, _lifetime, NullLogger<LiveMasterclass>.Instance);
     }
 
-    /// <summary>The clock of both the Quiz engine and the module; advance it to move time on.</summary>
-    public FakeTimeProvider Time { get; } = new(Start);
+    /// <summary>
+    /// The clock of both the Quiz engine and the module; advance it to move time on. To move the backend
+    /// timer on, use <see cref="TimerClock.AdvanceWhenTimerWaitsAsync"/> rather than advancing blindly.
+    /// </summary>
+    public TimerClock Time { get; } = new(Start);
 
     /// <summary>The Quiz engine the module calls, for arranging a Masterclass and reading state back.</summary>
     public QuizEngine Engine { get; }
