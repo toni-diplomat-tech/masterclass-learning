@@ -1,6 +1,6 @@
-import { Card } from "@/components/card";
 import type { SessionLeaderboard } from "@/lib/live-masterclass";
 import styles from "../participant.module.scss";
+import { RankCard } from "./rank-card";
 
 /**
  * This Participant's score on their phone, from the Session leaderboard: after a reveal, the points the
@@ -20,16 +20,7 @@ export function MyScore({
   if (!me) return null;
 
   if (leaderboard.ended || sessionOver) {
-    return (
-      <Card data-testid="my-score" className={styles.score}>
-        <p className={styles.points}>
-          {me.points} {me.points === 1 ? "point" : "points"}
-        </p>
-        <p data-testid="my-rank" className={styles.label}>
-          Rank {me.rank} of {leaderboard.entries.length}
-        </p>
-      </Card>
-    );
+    return <RankCard testId="my-score" points={me.points} rank={me.rank} of={leaderboard.entries.length} />;
   }
 
   return (
