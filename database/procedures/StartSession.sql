@@ -65,6 +65,8 @@ BEGIN
         INSERT @Problems (Problem) VALUES (N'This Workshop has already had its Session in this Masterclass.');
     ELSE IF EXISTS (SELECT 1 FROM dbo.Sessions WHERE MasterclassId = @MasterclassId AND EndedAt IS NULL)
         INSERT @Problems (Problem) VALUES (N'Another Session is still running.');
+    ELSE IF @NextWorkshopId IS NULL
+        INSERT @Problems (Problem) VALUES (N'Every Workshop has had its Session in this Masterclass.');
     ELSE IF @WorkshopId <> @NextWorkshopId
         INSERT @Problems (Problem) VALUES (CONCAT(
             N'Only the Next Workshop, ''', @NextWorkshopTitle, N''', can start its Session.'));

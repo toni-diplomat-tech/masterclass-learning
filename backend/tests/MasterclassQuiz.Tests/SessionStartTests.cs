@@ -9,14 +9,16 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
 {
     private static readonly DateTimeOffset Now = new(2026, 3, 2, 10, 0, 0, TimeSpan.Zero);
 
-    private readonly QuizEngine _engine = new(sqlServer.Connection, new FakeTimeProvider(Now));
+    private readonly FakeTimeProvider _time = new(Now);
+
+    private QuizEngine Engine => new(sqlServer.Connection, _time);
 
     [Fact]
     public async Task A_session_runs_the_requested_mix_from_easy_to_hard()
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 4, hard: 4);
 
-        var started = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(2, 2, 1));
+        var started = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(2, 2, 1));
 
         Assert.Empty(started.Problems);
         Assert.Equal(
@@ -38,7 +40,7 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     {
         var meeting = await OpenMeetingAsync(easy, medium, hard);
 
-        var started = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(mixEasy, mixMedium, mixHard));
+        var started = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(mixEasy, mixMedium, mixHard));
 
         Assert.Empty(started.Problems);
         var questions = started.Session!.Questions;
@@ -56,12 +58,12 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
         // Re-import without two Questions: they are retired, and the Workshop has 7 current ones left.
         file["questions"]!.AsArray().Remove(file.Question("easy-2"));
         file["questions"]!.AsArray().Remove(file.Question("hard-3"));
-        Assert.Empty((await _engine.ImportCourseAsync(file.ToJsonString())).Problems);
+        Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
 
-        var started = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(3, 3, 1));
+        var started = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(3, 3, 1));
 
         Assert.Empty(started.Problems);
-        var current = (await _engine.GetCourseAsync(meeting.CourseSlug))!.Workshops
+        var current = (await Engine.GetCourseAsync(meeting.CourseSlug))!.Workshops
             .Single(w => w.Id == meeting.WorkshopId).Lessons
             .SelectMany(l => l.Questions).Where(q => !q.Retired).Select(q => q.StableId);
         Assert.Equal(current.Order(), started.Session!.Questions.Select(q => q.StableId).Order());
@@ -124,24 +126,51 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     public async Task A_workshop_has_at_most_one_session_per_masterclass()
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
-        await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
 
-        var again = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var again = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
 
         Assert.Null(again.Session);
         Assert.Equal(["This Workshop has already had its Session in this Masterclass."], again.Problems);
     }
 
     [Fact]
+    public async Task A_workshop_whose_session_ended_cannot_start_another()
+    {
+        var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
+        await RunSessionAsync(meeting.MasterclassId, meeting.WorkshopId);
+
+        var again = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+
+        Assert.Null(again.Session);
+        Assert.Equal(["This Workshop has already had its Session in this Masterclass."], again.Problems);
+    }
+
+    [Fact]
+    public async Task No_session_starts_once_every_workshop_has_had_its_session()
+    {
+        var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
+        var testDoublesId = await Engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles");
+        await RunSessionAsync(meeting.MasterclassId, meeting.WorkshopId);
+        await RunSessionAsync(meeting.MasterclassId, testDoublesId);
+
+        var first = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var last = await Engine.StartSessionAsync(meeting.MasterclassId, testDoublesId, new DifficultyCounts(1, 0, 0));
+
+        Assert.Equal(["This Workshop has already had its Session in this Masterclass."], first.Problems);
+        Assert.Equal(["This Workshop has already had its Session in this Masterclass."], last.Problems);
+    }
+
+    [Fact]
     public async Task Only_one_session_runs_at_a_time()
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
-        await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
-        var otherWorkshopId = (await _engine.ListCoursesAsync())
+        await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var otherWorkshopId = (await Engine.ListCoursesAsync())
             .Single(c => c.Slug == meeting.CourseSlug).Workshops
             .Single(w => w.Slug != SessionFiles.WorkshopSlug).Id;
 
-        var other = await _engine.StartSessionAsync(meeting.MasterclassId, otherWorkshopId, new DifficultyCounts(1, 0, 0));
+        var other = await Engine.StartSessionAsync(meeting.MasterclassId, otherWorkshopId, new DifficultyCounts(1, 0, 0));
 
         Assert.Equal(["Another Session is still running."], other.Problems);
     }
@@ -151,8 +180,8 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
 
-        var skipped = await _engine.StartSessionAsync(meeting.MasterclassId, await _engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
-        var next = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var skipped = await Engine.StartSessionAsync(meeting.MasterclassId, await Engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var next = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
 
         Assert.Null(skipped.Session);
         Assert.Equal(["Only the Next Workshop, 'Unit tests', can start its Session."], skipped.Problems);
@@ -172,9 +201,9 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
         {
             file["questions"]!.AsArray().Remove(question);
         }
-        Assert.Empty((await _engine.ImportCourseAsync(file.ToJsonString())).Problems);
+        Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
 
-        var started = await _engine.StartSessionAsync(meeting.MasterclassId, await _engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(meeting.MasterclassId, await Engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
 
         Assert.Empty(started.Problems);
     }
@@ -183,11 +212,11 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     public async Task A_session_starts_only_in_an_open_masterclass()
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
-        var draft = await _engine.CreateMasterclassAsync(
-            (await _engine.GetMasterclassAsync(meeting.MasterclassId))!.CourseId, "Not opened yet");
+        var draft = await Engine.CreateMasterclassAsync(
+            (await Engine.GetMasterclassAsync(meeting.MasterclassId))!.CourseId, "Not opened yet");
 
-        var started = await _engine.StartSessionAsync(draft.Masterclass!.Id, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
-        var unknown = await _engine.StartSessionAsync(-1, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(draft.Masterclass!.Id, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var unknown = await Engine.StartSessionAsync(-1, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
 
         Assert.Equal(["Sessions can only start in an Open Masterclass."], started.Problems);
         Assert.Equal(["Sessions can only start in an Open Masterclass."], unknown.Problems);
@@ -199,7 +228,7 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
         var otherCourse = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
 
-        var started = await _engine.StartSessionAsync(meeting.MasterclassId, otherCourse.WorkshopId, new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(meeting.MasterclassId, otherCourse.WorkshopId, new DifficultyCounts(1, 0, 0));
 
         Assert.Equal(["There is no such Workshop in this Masterclass's Course."], started.Problems);
     }
@@ -212,8 +241,8 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     {
         var meeting = await OpenMeetingAsync(easy: 2, medium: 2, hard: 2);
 
-        var started = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(easy, medium, hard));
-        var afterwards = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(2, 2, 2));
+        var started = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(easy, medium, hard));
+        var afterwards = await Engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(2, 2, 2));
 
         Assert.Equal([problem], started.Problems);
         Assert.Empty(afterwards.Problems); // the refused start left nothing behind
@@ -224,14 +253,26 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
 
     private async Task<Meeting> OpenMeetingAsync(JsonObject file)
     {
-        var import = await _engine.ImportCourseAsync(file.ToJsonString());
+        var import = await Engine.ImportCourseAsync(file.ToJsonString());
         Assert.Empty(import.Problems);
-        var workshopId = (await _engine.ListCoursesAsync())
+        var workshopId = (await Engine.ListCoursesAsync())
             .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
-        var created = await _engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        await _engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id, sqlServer.Connection, new FakeTimeProvider(Now));
+        var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
+        await Engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id, sqlServer.Connection, _time);
         return new Meeting(created.Masterclass.Id, workshopId, import.Outcome.CourseSlug);
+    }
+
+    // Runs a one-Question Session of the Workshop to its end, letting the Question time out.
+    private async Task RunSessionAsync(int masterclassId, int workshopId)
+    {
+        var started = await Engine.StartSessionAsync(masterclassId, workshopId, new DifficultyCounts(1, 0, 0));
+        Assert.Empty(started.Problems);
+        _time.Advance(TimeSpan.FromMinutes(1));
+        Assert.NotNull(await Engine.RevealQuestionAsync(started.Session!.Id));
+        _time.Advance(TimeSpan.FromMinutes(1));
+        await Engine.AdvanceSessionAsync(started.Session.Id);
+        Assert.Equal(SessionStep.Ended, (await Engine.GetSessionProgressAsync(started.Session.Id))!.Step);
     }
 
     private sealed record Meeting(int MasterclassId, int WorkshopId, string CourseSlug);
