@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Dapper;
 
 namespace MasterclassQuiz.Api.Quiz;
@@ -76,9 +77,13 @@ public sealed partial class QuizEngine
         public DateTime CreatedAt { get; init; }
         public DateTime? OpenedAt { get; init; }
         public DateTime? ClosedAt { get; init; }
+        public int? NextWorkshopId { get; init; }
+        public string? WorkshopIdsWithSession { get; init; } // comma-separated
 
         public MasterclassOverview ToOverview() => new(
             Id, Name, CourseId, CourseTitle, (MasterclassStatus)Status, JoinCode, Participants,
-            Utc(CreatedAt), OpenedAt is { } opened ? Utc(opened) : null, ClosedAt is { } closed ? Utc(closed) : null);
+            Utc(CreatedAt), OpenedAt is { } opened ? Utc(opened) : null, ClosedAt is { } closed ? Utc(closed) : null,
+            NextWorkshopId,
+            WorkshopIdsWithSession?.Split(',').Select(id => int.Parse(id, CultureInfo.InvariantCulture)).ToList() ?? []);
     }
 }

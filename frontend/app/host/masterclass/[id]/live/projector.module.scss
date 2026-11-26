@@ -146,19 +146,22 @@
   gap: $space-4;
 }
 
-.field {
+// The Course's Workshops in the start-Session dialog, each a Notice: done on a green edge, the Next
+// Workshop on a red one, locked on a grey one.
+.workshops {
   display: flex;
   flex-direction: column;
   gap: $space-1;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: var(--color-text-muted);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-  select {
-    width: 100%;
-    color: var(--color-text);
-    font-size: $font-size-base;
-  }
+.workshop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
 }
 
 .mixInput {

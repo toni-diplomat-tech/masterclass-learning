@@ -126,16 +126,18 @@ public sealed class RecapTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Workshops_appear_in_course_order_and_those_without_a_session_are_left_out()
     {
-        var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(1, 0, 0));
+        var file = SessionFiles.WithWorkshopQuestions(1, 0, 0);
+        var meeting = await OpenMeetingAsync(file);
         var participant = await meeting.JoinAsync();
 
-        await meeting.RunSessionAsync("test-doubles", new() { [participant] = _ => 1 });
-        var withOne = await RecapOfAsync(participant);
         await meeting.RunSessionAsync("unit-tests", new() { [participant] = _ => 1 });
+        await Engine.ReimportWithWorkshopLastAsync(file, "unit-tests");
+        var withOne = await RecapOfAsync(participant);
+        await meeting.RunSessionAsync("test-doubles", new() { [participant] = _ => 1 });
         var withBoth = await RecapOfAsync(participant);
 
-        Assert.Equal([(2, "Test doubles")], withOne.Workshops.Select(w => (w.Number, w.Title)));
-        Assert.Equal([(1, "Unit tests"), (2, "Test doubles")], withBoth.Workshops.Select(w => (w.Number, w.Title)));
+        Assert.Equal([(3, "Unit tests")], withOne.Workshops.Select(w => (w.Number, w.Title)));
+        Assert.Equal([(2, "Test doubles"), (3, "Unit tests")], withBoth.Workshops.Select(w => (w.Number, w.Title)));
     }
 
     [Fact]

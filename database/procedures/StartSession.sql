@@ -3,6 +3,9 @@
 -- @Seed (same seed, same Questions drawn). @EasyLimitMs, @MediumLimitMs and @HardLimitMs are the times
 -- to answer per Difficulty, from configuration; each selected Question keeps its own.
 --
+-- Only the Next Workshop's Session can start, and only while no other Session runs: Workshops run in
+-- Course order, none skipped, each with one Session per Masterclass.
+--
 -- Selection: random within each Difficulty, only current (not retired) Questions of the Workshop, each
 -- at most once. A Difficulty that runs short is filled from the next level down (Hard -> Medium -> Easy);
 -- a short Easy is filled from the next level up (Medium, then Hard). Questions run from Easy to Hard.
@@ -49,10 +52,18 @@ BEGIN
         RETURN;
     END
 
+    DECLARE @NextWorkshopId int, @NextWorkshopTitle nvarchar(200);
+    SELECT @NextWorkshopId = Id, @NextWorkshopTitle = Title FROM dbo.NextWorkshop(@MasterclassId);
+
     IF EXISTS (SELECT 1 FROM dbo.Sessions WHERE MasterclassId = @MasterclassId AND WorkshopId = @WorkshopId)
         INSERT @Problems (Problem) VALUES (N'This Workshop has already had its Session in this Masterclass.');
     ELSE IF EXISTS (SELECT 1 FROM dbo.Sessions WHERE MasterclassId = @MasterclassId AND EndedAt IS NULL)
         INSERT @Problems (Problem) VALUES (N'Another Session is still running.');
+    ELSE IF @NextWorkshopId IS NULL
+        INSERT @Problems (Problem) VALUES (N'Every Workshop has had its Session in this Masterclass.');
+    ELSE IF @WorkshopId <> @NextWorkshopId
+        INSERT @Problems (Problem) VALUES (CONCAT(
+            N'Only the Next Workshop, ''', @NextWorkshopTitle, N''', can start its Session.'));
 
     -- The Workshop's current Questions, each with a random draw that orders it within its Difficulty.
     DECLARE @Candidates TABLE (QuestionId int PRIMARY KEY, Difficulty tinyint NOT NULL, Draw float NULL);

@@ -31,7 +31,7 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
         await FinishAsync(session.SessionId);
 
         // Session 2: second 500, first 375, third 250 (at the limit).
-        var started = await Engine.StartSessionAsync(session.MasterclassId, await WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(session.MasterclassId, await Engine.WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
         var question = started.Session!.FirstQuestion.QuestionId;
         await Engine.SubmitAnswerAsync(second, question, 1);
         _time.Advance(TimeSpan.FromMilliseconds(1_500));
@@ -73,10 +73,4 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
     }
 
     private async Task<string> NicknameAsync(string token) => (await Engine.GetParticipantAsync(token))!.Nickname;
-
-    private async Task<int> WorkshopIdAsync(int masterclassId, string slug)
-    {
-        var courseId = (await Engine.GetMasterclassAsync(masterclassId))!.CourseId;
-        return (await Engine.ListCoursesAsync()).Single(c => c.Id == courseId).Workshops.Single(w => w.Slug == slug).Id;
-    }
 }

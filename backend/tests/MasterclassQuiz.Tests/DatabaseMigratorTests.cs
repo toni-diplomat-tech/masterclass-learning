@@ -8,19 +8,22 @@ public sealed class DatabaseMigratorTests(SqlServerFixture sqlServer) : IDisposa
     private readonly string _scripts = Directory.CreateTempSubdirectory("migrator-test-").FullName;
 
     [Fact]
-    public void Migrations_run_once_each_in_order_and_procedures_run_on_every_startup()
+    public void Migrations_run_once_each_in_order_and_functions_then_procedures_run_on_every_startup()
     {
         Write("migrations/0002_add_example_column.sql", "ALTER TABLE dbo.Example ADD Name nvarchar(50) NULL;");
         Write("migrations/0001_create_example.sql", "CREATE TABLE dbo.Example (Id int NOT NULL);");
-        Write("procedures/GetExample.sql", "CREATE OR ALTER PROCEDURE dbo.GetExample AS SELECT Id, Name FROM dbo.Example;");
+        Write("functions/NamedExamples.sql", "CREATE OR ALTER FUNCTION dbo.NamedExamples() RETURNS TABLE AS RETURN SELECT Id, Name FROM dbo.Example WHERE Name IS NOT NULL;");
+        Write("procedures/GetExample.sql", "CREATE OR ALTER PROCEDURE dbo.GetExample AS SELECT Id, Name FROM dbo.NamedExamples();");
         var database = sqlServer.ConnectionFor("MigratorTest");
 
         var first = DatabaseMigrator.Migrate(database, _scripts);
         var second = DatabaseMigrator.Migrate(database, _scripts);
 
         Assert.Equal(["0001_create_example.sql", "0002_add_example_column.sql"], first.MigrationsApplied);
+        Assert.Equal(["NamedExamples.sql"], first.FunctionsApplied);
         Assert.Equal(["GetExample.sql"], first.ProceduresApplied);
         Assert.Empty(second.MigrationsApplied);
+        Assert.Equal(["NamedExamples.sql"], second.FunctionsApplied);
         Assert.Equal(["GetExample.sql"], second.ProceduresApplied);
     }
 

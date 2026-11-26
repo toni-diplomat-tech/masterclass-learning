@@ -67,7 +67,7 @@ async function ClosedProjector({ masterclass }: { masterclass: MasterclassOvervi
   );
 }
 
-// The live part: Join invitation and count, start-Session dialog with the Course's Workshops, Questions.
+// The live part: Join invitation and count, start-Session dialog for the Next Workshop, Questions.
 async function OpenProjector({ masterclass }: { masterclass: MasterclassOverview }) {
   const course = (await listCourses()).find((c) => c.id === masterclass.courseId);
   return (
@@ -75,6 +75,8 @@ async function OpenProjector({ masterclass }: { masterclass: MasterclassOverview
       masterclassId={masterclass.id}
       initialParticipants={masterclass.participants}
       workshops={course?.workshops ?? []}
+      nextWorkshopId={masterclass.nextWorkshopId}
+      workshopIdsWithSession={masterclass.workshopIdsWithSession}
       closeControl={<CloseMasterclassForm masterclassId={masterclass.id} />}
     >
       <JoinInvitation masterclass={masterclass} />

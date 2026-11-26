@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using MasterclassQuiz.Api.Quiz;
 
 namespace MasterclassQuiz.Tests;
 
@@ -29,6 +30,34 @@ public static class SessionFiles
             }
         }
         return file;
+    }
+
+    /// <summary>
+    /// Renumbers the Workshop to come after every other one in Course order and re-imports the file. Done
+    /// after the Workshop's Session ran, it makes Course order differ from the order the Sessions ran in.
+    /// </summary>
+    public static async Task ReimportWithWorkshopLastAsync(this QuizEngine engine, JsonObject file, string workshopSlug)
+    {
+        var workshops = file["workshops"]!.AsArray();
+        var last = workshops.Max(w => (int)w!["number"]!);
+        workshops.Single(w => (string?)w!["slug"] == workshopSlug)!["number"] = last + 1;
+        Assert.Empty((await engine.ImportCourseAsync(file.ToJsonString())).Problems);
+    }
+
+    /// <summary>
+    /// Takes the Workshop out of the file with its Lessons' Questions; re-importing the file retires them all.
+    /// </summary>
+    public static void RetireWorkshop(this JsonObject file, string workshopSlug)
+    {
+        var workshops = file["workshops"]!.AsArray();
+        var workshop = workshops.Single(w => (string?)w!["slug"] == workshopSlug)!;
+        var lessons = workshop["lessons"]!.AsArray().Select(l => (string)l!["slug"]!).ToHashSet();
+        workshops.Remove(workshop);
+        var questions = file["questions"]!.AsArray();
+        foreach (var question in questions.Where(q => lessons.Contains((string)q!["lesson"]!)).ToList())
+        {
+            questions.Remove(question);
+        }
     }
 
     public static JsonObject Question(string id, string difficulty) => new()
