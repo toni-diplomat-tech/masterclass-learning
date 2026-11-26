@@ -76,6 +76,7 @@ async function OpenProjector({ masterclass }: { masterclass: MasterclassOverview
       initialParticipants={masterclass.participants}
       workshops={course?.workshops ?? []}
       nextWorkshopId={masterclass.nextWorkshopId}
+      workshopIdsWithSession={masterclass.workshopIdsWithSession}
       closeControl={<CloseMasterclassForm masterclassId={masterclass.id} />}
     >
       <JoinInvitation masterclass={masterclass} />

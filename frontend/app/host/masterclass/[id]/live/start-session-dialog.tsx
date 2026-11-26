@@ -23,8 +23,8 @@ function suggestedMix(workshop: WorkshopOverview | undefined): DifficultyCounts 
 }
 
 /**
- * The start-Session dialog: where the Masterclass has got to in its Course (earlier Workshops done, the
- * Next Workshop next, later ones locked), and the Difficulty mix for the Next Workshop's Session, the only
+ * The start-Session dialog: where the Masterclass has got to in its Course (Workshops that have had their
+ * Session done, the Next Workshop next, the rest locked), and the Difficulty mix for the Next Workshop's Session, the only
  * one that can start, beside how many Questions of each Difficulty it has. A mix larger than the
  * Workshop's total can't be submitted (the server checks too); a short Difficulty is filled from the
  * others when the Session starts. A frosted sheet on the projector. Key it by the Next Workshop so the mix
@@ -33,13 +33,15 @@ function suggestedMix(workshop: WorkshopOverview | undefined): DifficultyCounts 
 export function StartSessionDialog({
   workshops,
   nextWorkshopId,
+  workshopIdsWithSession,
   onStart,
 }: {
   workshops: WorkshopOverview[];
   nextWorkshopId: number | null;
+  workshopIdsWithSession: number[];
   onStart: (workshopId: number, mix: DifficultyCounts) => Promise<string[]>;
 }) {
-  const progress = workshopProgress(workshops, nextWorkshopId);
+  const progress = workshopProgress(workshops, nextWorkshopId, workshopIdsWithSession);
   const workshop = progress.find((p) => p.step === "next")?.workshop;
   const [mix, setMix] = useState(() => suggestedMix(workshop));
   const [problems, setProblems] = useState<string[]>([]);

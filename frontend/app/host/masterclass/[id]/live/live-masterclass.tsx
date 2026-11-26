@@ -15,14 +15,15 @@ import { StartSessionDialog } from "./start-session-dialog";
  * The projector of an Open Masterclass, following it live: the Join invitation (`children`), the live
  * number of Participants and the start-Session dialog; then the running Question with its countdown and
  * answer count, its reveal, and so on until the Session ends, when the start dialog comes back for the
- * Next Workshop (`nextWorkshopId`, from the page). `closeControl` (Close Masterclass) sits at the bottom
- * between Sessions.
+ * Next Workshop (`nextWorkshopId`, from the page, beside `workshopIdsWithSession`, the Workshops that have
+ * had their Session). `closeControl` (Close Masterclass) sits at the bottom between Sessions.
  */
 export function LiveMasterclass({
   masterclassId,
   initialParticipants,
   workshops,
   nextWorkshopId,
+  workshopIdsWithSession,
   closeControl,
   children,
 }: {
@@ -30,6 +31,7 @@ export function LiveMasterclass({
   initialParticipants: number;
   workshops: WorkshopOverview[];
   nextWorkshopId: number | null;
+  workshopIdsWithSession: number[];
   closeControl: ReactNode;
   children: ReactNode;
 }) {
@@ -109,7 +111,13 @@ export function LiveMasterclass({
       {session.step === "ended" && <SessionLeaderboardTable leaderboard={leaderboard} />}
       {children}
       {participantCount}
-      <StartSessionDialog key={nextWorkshopId} workshops={workshops} nextWorkshopId={nextWorkshopId} onStart={startSession} />
+      <StartSessionDialog
+        key={nextWorkshopId}
+        workshops={workshops}
+        nextWorkshopId={nextWorkshopId}
+        workshopIdsWithSession={workshopIdsWithSession}
+        onStart={startSession}
+      />
       {closeControl}
     </>
   );

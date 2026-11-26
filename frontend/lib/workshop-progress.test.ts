@@ -10,8 +10,8 @@ const integration: WorkshopOverview = { id: 13, slug: "integration-tests", title
 const steps = (progress: ReturnType<typeof workshopProgress>) => progress.map((p) => [p.workshop.title, p.step]);
 
 describe("where a Masterclass has got to in its Course", () => {
-  it("shows earlier Workshops as done, the Next Workshop as next and later ones as locked", () => {
-    expect(steps(workshopProgress([unitTests, testDoubles, integration], testDoubles.id))).toEqual([
+  it("shows Workshops that had their Session as done, the Next Workshop as next and the rest as locked", () => {
+    expect(steps(workshopProgress([unitTests, testDoubles, integration], testDoubles.id, [unitTests.id]))).toEqual([
       ["Unit tests", "done"],
       ["Test doubles", "next"],
       ["Integration tests", "locked"],
@@ -19,15 +19,33 @@ describe("where a Masterclass has got to in its Course", () => {
   });
 
   it("goes in Course order whatever order the Workshops come in", () => {
-    expect(steps(workshopProgress([integration, unitTests, testDoubles], unitTests.id))).toEqual([
+    expect(steps(workshopProgress([integration, unitTests, testDoubles], unitTests.id, []))).toEqual([
       ["Unit tests", "next"],
       ["Test doubles", "locked"],
       ["Integration tests", "locked"],
     ]);
   });
 
+  it("orders Workshops with the same number by id, as the backend does", () => {
+    const sameNumber = { ...integration, number: 2 };
+    expect(steps(workshopProgress([sameNumber, testDoubles, unitTests], unitTests.id, []))).toEqual([
+      ["Unit tests", "next"],
+      ["Test doubles", "locked"],
+      ["Integration tests", "locked"],
+    ]);
+  });
+
+  it("keeps a Workshop done after a re-import moves it after the Next Workshop", () => {
+    const movedLast = { ...unitTests, number: 4 };
+    expect(steps(workshopProgress([movedLast, testDoubles, integration], testDoubles.id, [unitTests.id]))).toEqual([
+      ["Test doubles", "next"],
+      ["Integration tests", "locked"],
+      ["Unit tests", "done"],
+    ]);
+  });
+
   it("shows every Workshop as done once there is no Next Workshop", () => {
-    expect(steps(workshopProgress([unitTests, testDoubles], null))).toEqual([
+    expect(steps(workshopProgress([unitTests, testDoubles], null, [testDoubles.id, unitTests.id]))).toEqual([
       ["Unit tests", "done"],
       ["Test doubles", "done"],
     ]);
