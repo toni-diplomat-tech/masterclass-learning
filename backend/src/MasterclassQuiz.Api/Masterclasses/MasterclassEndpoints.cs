@@ -3,7 +3,10 @@ using MasterclassQuiz.Api.Quiz;
 
 namespace MasterclassQuiz.Api.Masterclasses;
 
-/// <summary>The Host's Masterclass endpoints: thin callers of the Quiz engine.</summary>
+/// <summary>
+/// The Host's Masterclass endpoints: thin callers of the Quiz engine, or of the live Masterclass module
+/// (<see cref="LiveMasterclass"/>) for a change that is broadcast.
+/// </summary>
 public static class MasterclassEndpoints
 {
     /// <summary>
@@ -43,9 +46,9 @@ public static class MasterclassEndpoints
                     statusCode: StatusCodes.Status409Conflict),
             });
 
-        host.MapPost("/masterclasses/{id:int}/close", async (int id, QuizEngine engine, MasterclassNotifier notifier, CancellationToken cancellationToken) =>
+        host.MapPost("/masterclasses/{id:int}/close", async (int id, LiveMasterclass live, CancellationToken cancellationToken) =>
         {
-            var result = await engine.CloseMasterclassAsync(id, cancellationToken);
+            var result = await live.CloseMasterclassAsync(id, cancellationToken);
             if (result.Masterclass is null)
             {
                 return Results.NotFound();
@@ -57,7 +60,6 @@ public static class MasterclassEndpoints
                     statusCode: StatusCodes.Status409Conflict,
                     extensions: new Dictionary<string, object?> { ["problems"] = result.Problems });
             }
-            await notifier.MasterclassClosedAsync(id, cancellationToken);
             return Results.Ok(result.Masterclass);
         });
 
