@@ -7,7 +7,9 @@ namespace MasterclassQuiz.Api.Live;
 /// its Quiz engine call and sends the broadcasts that go with the change, through the broadcast port
 /// (<see cref="IMasterclassBroadcasts"/>). It adds no business rules: the engine decides.
 /// Once the engine has made a change, its broadcasts go out with the application's lifetime, not the
-/// caller's cancellation, so a caller going away can't leave the screens behind.
+/// caller's cancellation, so a caller going away can't leave the screens behind. A broadcast that fails
+/// after the change is logged, not thrown: the change stands, so the caller is told it was made, and the
+/// backend timer follows and wakes Sessions whether or not the broadcast got through.
 /// The backend timer that reveals and advances running Sessions is internal to it and shares the
 /// engine's <see cref="TimeProvider"/>, so a fake clock moves both.
 /// </summary>
@@ -30,8 +32,8 @@ public sealed class LiveMasterclass(
         var result = await engine.StartSessionAsync(masterclassId, workshopId, mix, cancellationToken);
         if (result.Session is { } session)
         {
-            await broadcasts.QuestionStartedAsync(session.FirstQuestion, lifetime.ApplicationStopping);
             _timer.Follow(session.Id);
+            await BroadcastAsync(QuizHub.QuestionStarted, masterclassId, () => broadcasts.QuestionStartedAsync(session.FirstQuestion, lifetime.ApplicationStopping));
         }
         return result.Problems;
     }
@@ -74,7 +76,7 @@ public sealed class LiveMasterclass(
         var result = await engine.CloseMasterclassAsync(masterclassId, cancellationToken);
         if (result.Succeeded && before is not { Status: MasterclassStatus.Closed })
         {
-            await broadcasts.MasterclassClosedAsync(masterclassId, lifetime.ApplicationStopping);
+            await BroadcastAsync(QuizHub.MasterclassClosed, masterclassId, () => broadcasts.MasterclassClosedAsync(masterclassId, lifetime.ApplicationStopping));
         }
         return result;
     }
@@ -93,10 +95,13 @@ public sealed class LiveMasterclass(
             return null;
         }
         var masterclassId = joined.Participant.MasterclassId;
-        if (await engine.GetMasterclassAsync(masterclassId, lifetime.ApplicationStopping) is { } masterclass)
+        await BroadcastAsync(QuizHub.ParticipantCountUpdated, masterclassId, async () =>
         {
-            await broadcasts.ParticipantCountUpdatedAsync(new ParticipantCount(masterclassId, masterclass.Participants), lifetime.ApplicationStopping);
-        }
+            if (await engine.GetMasterclassAsync(masterclassId, lifetime.ApplicationStopping) is { } masterclass)
+            {
+                await broadcasts.ParticipantCountUpdatedAsync(new ParticipantCount(masterclassId, masterclass.Participants), lifetime.ApplicationStopping);
+            }
+        });
         return joined;
     }
 
@@ -111,12 +116,25 @@ public sealed class LiveMasterclass(
         var submitted = await engine.SubmitAnswerAsync(participantToken, questionId, option, cancellationToken);
         if (submitted is { Result: AnswerResult.Accepted, Count: { } count })
         {
-            await broadcasts.AnswerCountUpdatedAsync(count, lifetime.ApplicationStopping);
+            await BroadcastAsync(QuizHub.AnswerCountUpdated, count.MasterclassId, () => broadcasts.AnswerCountUpdatedAsync(count, lifetime.ApplicationStopping));
             if (count.EveryoneAnswered)
             {
                 _timer.Wake(count.SessionId);
             }
         }
         return submitted.Result;
+    }
+
+    // Sends a broadcast that goes with a change the engine has already made; a failure is only logged.
+    private async Task BroadcastAsync(string message, int masterclassId, Func<Task> send)
+    {
+        try
+        {
+            await send();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Broadcasting {Message} to Masterclass {MasterclassId} failed", message, masterclassId);
+        }
     }
 }

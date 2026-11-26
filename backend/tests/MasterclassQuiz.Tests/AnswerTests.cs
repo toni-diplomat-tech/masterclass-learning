@@ -23,10 +23,10 @@ public sealed class AnswerTests(SqlServerFixture sqlServer)
     [InlineData(3_501, AnswerResult.TooLate)]
     public async Task An_answer_counts_until_half_a_second_after_the_time_limit(int afterStartMs, AnswerResult expected)
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromMilliseconds(afterStartMs));
 
-        var submitted = await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var submitted = await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
 
         Assert.Equal(expected, submitted.Result);
     }
@@ -34,10 +34,10 @@ public sealed class AnswerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_participant_answers_a_question_once_and_cannot_change_it()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 2);
 
-        var again = await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var again = await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
 
         Assert.Equal(AnswerResult.AlreadyAnswered, again.Result);
         Assert.Equal(1, again.Count!.Answered);
@@ -46,24 +46,24 @@ public sealed class AnswerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Each_accepted_answer_raises_the_questions_answer_count()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 3, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 3, easy: 1);
 
-        var first = await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
-        var second = await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 2);
+        var first = await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
+        var second = await Engine.SubmitAnswerAsync(session.Tokens[1], session.Question.QuestionId, 2);
 
-        Assert.Equal(new AnswerCount(meeting.MasterclassId, meeting.SessionId, meeting.Question.QuestionId, 1, 3), first.Count);
-        Assert.Equal(new AnswerCount(meeting.MasterclassId, meeting.SessionId, meeting.Question.QuestionId, 2, 3), second.Count);
+        Assert.Equal(new AnswerCount(session.MasterclassId, session.SessionId, session.Question.QuestionId, 1, 3), first.Count);
+        Assert.Equal(new AnswerCount(session.MasterclassId, session.SessionId, session.Question.QuestionId, 2, 3), second.Count);
         Assert.False(second.Count!.EveryoneAnswered);
     }
 
     [Fact]
     public async Task A_participant_who_joined_after_the_question_started_cannot_answer_it()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromSeconds(1));
-        var late = (await Engine.JoinMasterclassAsync(meeting.JoinCode, null))!.Token;
+        var late = (await Engine.JoinMasterclassAsync(session.JoinCode, null))!.Token;
 
-        var submitted = await Engine.SubmitAnswerAsync(late, meeting.Question.QuestionId, 1);
+        var submitted = await Engine.SubmitAnswerAsync(late, session.Question.QuestionId, 1);
 
         Assert.Equal(AnswerResult.JoinedAfterStart, submitted.Result);
         Assert.Equal(1, submitted.Count!.Participants);
@@ -74,9 +74,9 @@ public sealed class AnswerTests(SqlServerFixture sqlServer)
     [InlineData(4)] // the Questions have three options
     public async Task An_answer_must_be_one_of_the_questions_options(int option)
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
 
-        var submitted = await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, option);
+        var submitted = await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, option);
 
         Assert.Equal(AnswerResult.UnknownOption, submitted.Result);
         Assert.Equal(0, submitted.Count!.Answered);
@@ -85,12 +85,12 @@ public sealed class AnswerTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Only_a_question_that_ran_in_the_participants_masterclass_can_be_answered()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
         var other = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
-        var notStartedYet = meeting.Questions[1].QuestionId;
+        var notStartedYet = session.Questions[1].QuestionId;
 
-        Assert.Equal(AnswerResult.NoSuchQuestion, (await Engine.SubmitAnswerAsync(meeting.Tokens[0], other.Question.QuestionId, 1)).Result);
-        Assert.Equal(AnswerResult.UnknownParticipant, (await Engine.SubmitAnswerAsync("nobody", meeting.Question.QuestionId, 1)).Result);
-        Assert.Equal(AnswerResult.NoSuchQuestion, (await Engine.SubmitAnswerAsync(meeting.Tokens[0], notStartedYet, 1)).Result);
+        Assert.Equal(AnswerResult.NoSuchQuestion, (await Engine.SubmitAnswerAsync(session.Tokens[0], other.Question.QuestionId, 1)).Result);
+        Assert.Equal(AnswerResult.UnknownParticipant, (await Engine.SubmitAnswerAsync("nobody", session.Question.QuestionId, 1)).Result);
+        Assert.Equal(AnswerResult.NoSuchQuestion, (await Engine.SubmitAnswerAsync(session.Tokens[0], notStartedYet, 1)).Result);
     }
 }

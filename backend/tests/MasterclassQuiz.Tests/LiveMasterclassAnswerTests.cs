@@ -1,5 +1,6 @@
 using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Quiz;
+using static MasterclassQuiz.Tests.LiveMasterclassFixture;
 
 namespace MasterclassQuiz.Tests;
 
@@ -10,7 +11,7 @@ namespace MasterclassQuiz.Tests;
 [Collection(nameof(SqlServerCollection))]
 public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDisposable
 {
-    private readonly LiveMasterclassFixture _live = new(sqlServer, Settings);
+    private readonly LiveMasterclassFixture _live = new(sqlServer);
 
     [Fact]
     public async Task An_accepted_answer_broadcasts_the_answer_count()
@@ -41,9 +42,9 @@ public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDi
     [Fact]
     public async Task An_answer_from_an_unknown_participant_broadcasts_nothing()
     {
-        var meeting = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 2);
 
-        var result = await _live.Live.SubmitAnswerAsync("nobody", meeting.Question.QuestionId, 1);
+        var result = await _live.Live.SubmitAnswerAsync("nobody", session.Question.QuestionId, 1);
 
         Assert.Equal(AnswerResult.UnknownParticipant, result);
         await _live.Broadcasts.AssertQuietAsync();
@@ -52,10 +53,10 @@ public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDi
     [Fact]
     public async Task An_answer_to_a_question_that_is_not_running_broadcasts_nothing()
     {
-        var meeting = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 2);
-        var notStartedYet = meeting.Questions[1].QuestionId;
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 2);
+        var notStartedYet = session.Questions[1].QuestionId;
 
-        var result = await _live.Live.SubmitAnswerAsync(meeting.Tokens[0], notStartedYet, 1);
+        var result = await _live.Live.SubmitAnswerAsync(session.Tokens[0], notStartedYet, 1);
 
         Assert.Equal(AnswerResult.NoSuchQuestion, result);
         await _live.Broadcasts.AssertQuietAsync();
@@ -96,13 +97,6 @@ public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDi
     }
 
     public void Dispose() => _live.Dispose();
-
-    // Easy Questions have 3 seconds to answer.
-    private static readonly QuizSettings Settings = new()
-    {
-        TimeLimitSeconds = new TimeLimitSeconds { Easy = 3 },
-        RevealPauseSeconds = 2,
-    };
 
     // Starts a two-Question Session through the module (so the backend timer follows it) and takes its
     // first QuestionStarted broadcast.

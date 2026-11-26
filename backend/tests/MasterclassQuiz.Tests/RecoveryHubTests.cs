@@ -29,19 +29,19 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_reloaded_phone_gets_the_running_question_and_its_locked_answer_but_not_the_correct_option()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
-        var cookie = $"{ParticipantEndpoints.CookieName}={meeting.Tokens[0]}";
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var cookie = $"{ParticipantEndpoints.CookieName}={session.Tokens[0]}";
         await using (var before = await ConnectedAsync(cookie))
         {
-            await before.InvokeAsync<JsonObject>("GetCurrentState", meeting.MasterclassId);
-            Assert.Equal("Accepted", (string?)(await before.InvokeAsync<JsonObject>("SubmitAnswer", meeting.Question.QuestionId, 2))["result"]);
+            await before.InvokeAsync<JsonObject>("GetCurrentState", session.MasterclassId);
+            Assert.Equal("Accepted", (string?)(await before.InvokeAsync<JsonObject>("SubmitAnswer", session.Question.QuestionId, 2))["result"]);
         }
 
         await using var reloaded = await ConnectedAsync(cookie);
-        var state = await reloaded.InvokeAsync<JsonObject>("GetCurrentState", meeting.MasterclassId);
+        var state = await reloaded.InvokeAsync<JsonObject>("GetCurrentState", session.MasterclassId);
 
-        Assert.Equal(("Question", meeting.Question.QuestionId), ((string?)state["step"], (int)state["question"]!["questionId"]!));
-        Assert.Equal(meeting.Question.Deadline, (DateTime)state["question"]!["deadline"]!);
+        Assert.Equal(("Question", session.Question.QuestionId), ((string?)state["step"], (int)state["question"]!["questionId"]!));
+        Assert.Equal(session.Question.Deadline, (DateTime)state["question"]!["deadline"]!);
         var answer = state["participant"]!["answer"]!;
         Assert.Equal((true, 2, null), ((bool)answer["canAnswer"]!, (int?)answer["option"], (string?)answer["outcome"]));
         Assert.DoesNotContain("correct", state.ToJsonString(), StringComparison.OrdinalIgnoreCase);
@@ -50,13 +50,13 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_reloaded_projector_gets_the_running_question_with_its_answer_count()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         await using var projector = await ConnectedAsync(await HostCookieAsync());
 
-        var state = await projector.InvokeAsync<JsonObject>("GetCurrentState", meeting.MasterclassId);
+        var state = await projector.InvokeAsync<JsonObject>("GetCurrentState", session.MasterclassId);
 
-        Assert.Equal(("Question", meeting.Question.QuestionId), ((string?)state["step"], (int)state["question"]!["questionId"]!));
+        Assert.Equal(("Question", session.Question.QuestionId), ((string?)state["step"], (int)state["question"]!["questionId"]!));
         Assert.Equal((1, 2), ((int)state["count"]!["answered"]!, (int)state["count"]!["participants"]!));
         Assert.Null(state["participant"]);
     }
@@ -64,15 +64,15 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_stranger_gets_no_state_and_cannot_resume()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         var other = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         await using var stranger = await ConnectedAsync(cookie: null);
         await using var otherPhone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={other.Tokens[0]}");
-        await using var phone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={meeting.Tokens[0]}");
+        await using var phone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={session.Tokens[0]}");
 
-        Assert.Null(await stranger.InvokeAsync<JsonObject?>("GetCurrentState", meeting.MasterclassId));
-        Assert.Null(await otherPhone.InvokeAsync<JsonObject?>("GetCurrentState", meeting.MasterclassId));
-        await Assert.ThrowsAsync<HubException>(() => phone.InvokeAsync<JsonObject>("ResumeSession", meeting.MasterclassId));
+        Assert.Null(await stranger.InvokeAsync<JsonObject?>("GetCurrentState", session.MasterclassId));
+        Assert.Null(await otherPhone.InvokeAsync<JsonObject?>("GetCurrentState", session.MasterclassId));
+        await Assert.ThrowsAsync<HubException>(() => phone.InvokeAsync<JsonObject>("ResumeSession", session.MasterclassId));
     }
 
     private async Task<string> HostCookieAsync()

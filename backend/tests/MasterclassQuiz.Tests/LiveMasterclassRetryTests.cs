@@ -2,6 +2,7 @@ using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Quiz;
 using Microsoft.Data.SqlClient;
+using static MasterclassQuiz.Tests.LiveMasterclassFixture;
 
 namespace MasterclassQuiz.Tests;
 
@@ -24,7 +25,7 @@ public sealed class LiveMasterclassRetryTests : IDisposable
         // No reconnect retries: an offline database fails the Quiz engine's call at once.
         _database = new DatabaseConnection(new SqlConnectionStringBuilder(sqlServer.ConnectionFor(DatabaseName).ConnectionString) { ConnectRetryCount = 0 }.ConnectionString);
         DatabaseMigrator.Migrate(_database, DatabaseMigrator.DefaultScriptsDirectory);
-        _live = new LiveMasterclassFixture(sqlServer, Settings, _database);
+        _live = new LiveMasterclassFixture(sqlServer, database: _database);
     }
 
     [Fact]
@@ -42,9 +43,8 @@ public sealed class LiveMasterclassRetryTests : IDisposable
 
         await SetDatabaseAsync("ONLINE");
         SqlConnection.ClearPool(new SqlConnection(_database.ConnectionString));
-        await _live.Time.AdvanceWhenTimerWaitsAsync(RetryDelay);
 
-        var revealed = await _live.Broadcasts.NextAsync<QuestionRevealed>(QuizHub.QuestionRevealed, TimeSpan.FromSeconds(10));
+        var revealed = await AdvanceUntilBroadcastAsync<QuestionRevealed>(QuizHub.QuestionRevealed);
         Assert.Equal((first.QuestionId, 1), (revealed.QuestionId, revealed.TimedOut));
         await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
         await _live.Time.AdvanceWhenTimerWaitsAsync(RevealPause);
@@ -58,17 +58,23 @@ public sealed class LiveMasterclassRetryTests : IDisposable
         SetDatabaseAsync("ONLINE").GetAwaiter().GetResult();
     }
 
-    // Easy Questions have 3 seconds to answer (Answers close 3.5 s after the start, with grace); a revealed
-    // Question stays up 2 seconds; the backend timer retries a failed step after 1 second.
-    private static readonly QuizSettings Settings = new()
+    // Moves the clock on in small steps, each once the backend timer waits on it, until it broadcasts
+    // <paramref name="message"/>: the timer's retry delay is its own business, so the test doesn't assume it.
+    private async Task<T> AdvanceUntilBroadcastAsync<T>(string message)
     {
-        TimeLimitSeconds = new TimeLimitSeconds { Easy = 3 },
-        RevealPauseSeconds = 2,
-    };
-
-    private static readonly TimeSpan AnswersClose = TimeSpan.FromMilliseconds(3_500);
-    private static readonly TimeSpan RevealPause = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
+        var step = TimeSpan.FromMilliseconds(100);
+        for (var advanced = TimeSpan.Zero; advanced < TimeSpan.FromMinutes(1); advanced += step)
+        {
+            await _live.Time.WaitForTimerAsync(TimeSpan.FromSeconds(15));
+            if (_live.Broadcasts.TryNext(out var heard))
+            {
+                Assert.Equal(message, heard.Message);
+                return Assert.IsType<T>(heard.Payload);
+            }
+            _live.Time.Advance(step);
+        }
+        throw new TimeoutException($"No {message} within a minute on the clock.");
+    }
 
     private async Task SetDatabaseAsync(string state)
     {

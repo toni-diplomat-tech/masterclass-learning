@@ -1,5 +1,6 @@
 using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Quiz;
+using static MasterclassQuiz.Tests.LiveMasterclassFixture;
 
 namespace MasterclassQuiz.Tests;
 
@@ -10,7 +11,7 @@ namespace MasterclassQuiz.Tests;
 [Collection(nameof(SqlServerCollection))]
 public sealed class LiveMasterclassSessionTests(SqlServerFixture sqlServer) : IDisposable
 {
-    private readonly LiveMasterclassFixture _live = new(sqlServer, Settings);
+    private readonly LiveMasterclassFixture _live = new(sqlServer);
 
     [Fact]
     public async Task Starting_a_session_broadcasts_its_first_question()
@@ -90,18 +91,24 @@ public sealed class LiveMasterclassSessionTests(SqlServerFixture sqlServer) : ID
         await _live.Broadcasts.AssertQuietAsync();
     }
 
-    public void Dispose() => _live.Dispose();
-
-    // Easy Questions have 3 seconds to answer, so Answers close 3.5 s after the start (with grace);
-    // a revealed Question stays up 2 seconds.
-    private static readonly QuizSettings Settings = new()
+    [Fact]
+    public async Task Once_the_session_has_ended_the_timer_stops_following_it()
     {
-        TimeLimitSeconds = new TimeLimitSeconds { Easy = 3 },
-        RevealPauseSeconds = 2,
-    };
+        await StartAsync(participants: 1, easy: 1);
+        await _live.Time.AdvanceWhenTimerWaitsAsync(AnswersClose);
+        await _live.Broadcasts.NextAsync<QuestionRevealed>(QuizHub.QuestionRevealed);
+        await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
+        await _live.Time.AdvanceWhenTimerWaitsAsync(RevealPause);
+        await _live.Broadcasts.NextAsync<SessionEnded>(QuizHub.SessionEnded);
+        await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
 
-    private static readonly TimeSpan AnswersClose = TimeSpan.FromMilliseconds(3_500);
-    private static readonly TimeSpan RevealPause = TimeSpan.FromSeconds(2);
+        await Assert.ThrowsAsync<TimeoutException>(() => _live.Time.WaitForTimerAsync(TimeSpan.FromMilliseconds(500)));
+        _live.Time.Advance(TimeSpan.FromMinutes(10));
+        await _live.Broadcasts.AssertQuietAsync();
+        await Assert.ThrowsAsync<TimeoutException>(() => _live.Time.WaitForTimerAsync(TimeSpan.FromMilliseconds(200)));
+    }
+
+    public void Dispose() => _live.Dispose();
 
     // Starts a Session through the module and takes its first QuestionStarted broadcast.
     private async Task<QuestionStarted> StartAsync(int participants, int easy)

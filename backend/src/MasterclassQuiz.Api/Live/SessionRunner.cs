@@ -87,7 +87,7 @@ internal sealed class SessionRunner(
         }
         finally
         {
-            _followed.TryRemove(sessionId, out _);
+            _followed.TryRemove(KeyValuePair.Create(sessionId, wake)); // only its own entry
         }
     }
 

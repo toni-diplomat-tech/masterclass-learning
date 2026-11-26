@@ -23,12 +23,12 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_correct_answer_given_at_once_scores_the_full_base_points()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
 
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
-        await Engine.RevealQuestionAsync(meeting.SessionId);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
+        await Engine.RevealQuestionAsync(session.SessionId);
 
-        var leaderboard = await Engine.GetSessionLeaderboardAsync(meeting.SessionId);
+        var leaderboard = await Engine.GetSessionLeaderboardAsync(session.SessionId);
         var entry = Assert.Single(leaderboard!.Entries);
         Assert.Equal((1, 500, 500), (entry.Rank, entry.Points, entry.QuestionPoints));
     }
@@ -40,30 +40,30 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [InlineData(3_500, 250)] // the last moment of the grace period
     public async Task A_correct_answer_scores_less_the_longer_it_took(int elapsedMs, int points)
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromMilliseconds(elapsedMs));
 
-        Assert.Equal(AnswerResult.Accepted, (await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1)).Result);
-        await Engine.RevealQuestionAsync(meeting.SessionId);
+        Assert.Equal(AnswerResult.Accepted, (await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1)).Result);
+        await Engine.RevealQuestionAsync(session.SessionId);
 
-        Assert.Equal(points, Assert.Single((await Engine.GetSessionLeaderboardAsync(meeting.SessionId))!.Entries).Points);
+        Assert.Equal(points, Assert.Single((await Engine.GetSessionLeaderboardAsync(session.SessionId))!.Entries).Points);
     }
 
     [Fact]
     public async Task Harder_questions_are_worth_more_and_the_session_sums_them()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1, medium: 1, hard: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1, medium: 1, hard: 1);
         var scored = new List<(int Points, int QuestionPoints)>();
 
-        var question = meeting.Question;
+        var question = session.Question;
         for (var i = 0; i < 3; i++)
         {
-            await Engine.SubmitAnswerAsync(meeting.Tokens[0], question.QuestionId, 1);
-            await Engine.RevealQuestionAsync(meeting.SessionId);
-            var entry = Assert.Single((await Engine.GetSessionLeaderboardAsync(meeting.SessionId))!.Entries);
+            await Engine.SubmitAnswerAsync(session.Tokens[0], question.QuestionId, 1);
+            await Engine.RevealQuestionAsync(session.SessionId);
+            var entry = Assert.Single((await Engine.GetSessionLeaderboardAsync(session.SessionId))!.Entries);
             scored.Add((entry.Points, entry.QuestionPoints));
             _time.Advance(TimeSpan.FromSeconds(2));
-            question = (await Engine.AdvanceSessionAsync(meeting.SessionId)).Started!;
+            question = (await Engine.AdvanceSessionAsync(session.SessionId)).Started!;
         }
 
         Assert.Equal([(500, 500), (1_250, 750), (2_250, 1_000)], scored);
@@ -72,12 +72,12 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Incorrect_and_timed_out_answers_score_nothing()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 2);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
-        await Engine.RevealQuestionAsync(meeting.SessionId);
+        await Engine.RevealQuestionAsync(session.SessionId);
 
-        var entries = (await Engine.GetSessionLeaderboardAsync(meeting.SessionId))!.Entries;
+        var entries = (await Engine.GetSessionLeaderboardAsync(session.SessionId))!.Entries;
 
         Assert.Equal([(1, 0, 0), (1, 0, 0)], entries.Select(e => (e.Rank, e.Points, e.QuestionPoints)));
     }
@@ -85,10 +85,10 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Points_count_only_once_the_question_is_revealed()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
 
-        var leaderboard = await Engine.GetSessionLeaderboardAsync(meeting.SessionId);
+        var leaderboard = await Engine.GetSessionLeaderboardAsync(session.SessionId);
 
         Assert.Empty(leaderboard!.Entries);
         Assert.False(leaderboard.Ended);
@@ -97,20 +97,20 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Participants_with_the_same_points_share_a_rank()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 4, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 4, easy: 1);
         var nicknames = new List<string>();
-        foreach (var token in meeting.Tokens)
+        foreach (var token in session.Tokens)
         {
             nicknames.Add((await Engine.GetParticipantAsync(token))!.Nickname);
         }
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[1], session.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromMilliseconds(1_500));
-        await Engine.SubmitAnswerAsync(meeting.Tokens[2], meeting.Question.QuestionId, 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[3], meeting.Question.QuestionId, 1);
-        await Engine.RevealQuestionAsync(meeting.SessionId);
+        await Engine.SubmitAnswerAsync(session.Tokens[2], session.Question.QuestionId, 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[3], session.Question.QuestionId, 1);
+        await Engine.RevealQuestionAsync(session.SessionId);
 
-        var leaderboard = await Engine.GetSessionLeaderboardAsync(meeting.SessionId);
+        var leaderboard = await Engine.GetSessionLeaderboardAsync(session.SessionId);
 
         Assert.Equal(
             [
@@ -126,16 +126,16 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_final_leaderboard_says_the_session_ended()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
-        await Engine.RevealQuestionAsync(meeting.SessionId);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
+        await Engine.RevealQuestionAsync(session.SessionId);
         _time.Advance(TimeSpan.FromSeconds(2));
-        await Engine.AdvanceSessionAsync(meeting.SessionId);
+        await Engine.AdvanceSessionAsync(session.SessionId);
 
-        var leaderboard = await Engine.GetSessionLeaderboardAsync(meeting.SessionId);
+        var leaderboard = await Engine.GetSessionLeaderboardAsync(session.SessionId);
 
         Assert.True(leaderboard!.Ended);
-        Assert.Equal((meeting.MasterclassId, meeting.SessionId), (leaderboard.MasterclassId, leaderboard.SessionId));
+        Assert.Equal((session.MasterclassId, session.SessionId), (leaderboard.MasterclassId, leaderboard.SessionId));
         Assert.Equal(500, Assert.Single(leaderboard.Entries).Points);
     }
 
