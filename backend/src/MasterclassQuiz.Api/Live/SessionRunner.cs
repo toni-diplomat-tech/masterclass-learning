@@ -8,14 +8,16 @@ namespace MasterclassQuiz.Api.Live;
 /// step is due (<see cref="SessionProgress.DueAt"/>), then reveals the running Question or, after the
 /// reveal pause, starts the next one or ends the Session, and broadcasts what happened. The Quiz engine
 /// decides whether a step is due, so a late or early wake-up does no harm. <see cref="Wake"/> makes it
-/// look again before the deadline (once every Participant has answered).
+/// look again before the deadline (once every Participant has answered). Internal to the
+/// <see cref="LiveMasterclass"/> module, which follows and wakes Sessions; its broadcasts leave through
+/// the module's broadcast port. It shares the Quiz engine's <see cref="TimeProvider"/>.
 /// </summary>
-public sealed class SessionRunner(
+internal sealed class SessionRunner(
     QuizEngine engine,
-    SessionNotifier notifier,
+    IMasterclassBroadcasts broadcasts,
     TimeProvider timeProvider,
     IHostApplicationLifetime lifetime,
-    ILogger<SessionRunner> logger)
+    ILogger logger)
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMilliseconds(50);
@@ -88,7 +90,7 @@ public sealed class SessionRunner(
             var revealed = await engine.RevealQuestionAsync(sessionId, stopping);
             if (revealed is not null)
             {
-                await notifier.QuestionRevealedAsync(revealed, stopping);
+                await broadcasts.QuestionRevealedAsync(revealed, stopping);
                 await SendLeaderboardAsync(sessionId, stopping);
             }
             return revealed is not null;
@@ -97,11 +99,11 @@ public sealed class SessionRunner(
         var advance = await engine.AdvanceSessionAsync(sessionId, stopping);
         if (advance.Started is { } started)
         {
-            await notifier.QuestionStartedAsync(started, stopping);
+            await broadcasts.QuestionStartedAsync(started, stopping);
         }
         if (advance.Ended is { } ended)
         {
-            await notifier.SessionEndedAsync(ended, stopping);
+            await broadcasts.SessionEndedAsync(ended, stopping);
             await SendLeaderboardAsync(sessionId, stopping);
         }
         return advance.Started is not null || advance.Ended is not null;
@@ -112,7 +114,7 @@ public sealed class SessionRunner(
     {
         if (await engine.GetSessionLeaderboardAsync(sessionId, stopping) is { } leaderboard)
         {
-            await notifier.LeaderboardUpdatedAsync(leaderboard, stopping);
+            await broadcasts.LeaderboardUpdatedAsync(leaderboard, stopping);
         }
     }
 

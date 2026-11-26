@@ -36,8 +36,8 @@ public sealed partial class QuizHub
     {
         foreach (var sessionId in await engine.ListRunningSessionsAsync(masterclassId, Context.ConnectionAborted))
         {
-            runner.Follow(sessionId);
-            runner.Wake(sessionId);
+            live.FollowSession(sessionId);
+            live.WakeSession(sessionId);
         }
         return await engine.GetCurrentStateAsync(masterclassId, null, Context.ConnectionAborted);
     }
