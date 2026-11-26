@@ -61,6 +61,25 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_participant_finds_their_place_and_points_on_the_masterclass_leaderboard()
+    {
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 3, easy: 1);
+        var (first, second, third) = (session.Tokens[0], session.Tokens[1], session.Tokens[2]);
+        await Engine.SubmitAnswerAsync(first, session.Question.QuestionId, 1);
+        await Engine.SubmitAnswerAsync(third, session.Question.QuestionId, 2);
+        _time.Advance(TimeSpan.FromMilliseconds(1_500));
+        await Engine.SubmitAnswerAsync(second, session.Question.QuestionId, 1);
+        await FinishAsync(session.SessionId);
+        var late = (await Engine.JoinMasterclassAsync(session.JoinCode, null))!.Token;
+
+        Assert.Equal(new MasterclassPlace(1, 500, 3), await Engine.GetMasterclassPlaceAsync(first));
+        Assert.Equal(new MasterclassPlace(2, 375, 3), await Engine.GetMasterclassPlaceAsync(second));
+        Assert.Equal(new MasterclassPlace(3, 0, 3), await Engine.GetMasterclassPlaceAsync(third));
+        Assert.Null(await Engine.GetMasterclassPlaceAsync(late));
+        Assert.Null(await Engine.GetMasterclassPlaceAsync("made-up"));
+    }
+
+    [Fact]
     public async Task There_is_no_leaderboard_for_an_unknown_masterclass()
     {
         Assert.Null(await Engine.GetMasterclassLeaderboardAsync(-1));

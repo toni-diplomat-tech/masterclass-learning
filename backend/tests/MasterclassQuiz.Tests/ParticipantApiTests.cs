@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using MasterclassQuiz.Api.HostAuth;
+using MasterclassQuiz.Api.Quiz;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace MasterclassQuiz.Tests;
@@ -66,6 +67,36 @@ public sealed class ParticipantApiTests(SqlServerFixture sqlServer) : IDisposabl
         var problem = await join.Content.ReadFromJsonAsync<JsonObject>();
         Assert.Equal("No open Masterclass has this Join code.", (string?)problem!["title"]);
         Assert.False(join.Headers.Contains("Set-Cookie"));
+    }
+
+    [Fact]
+    public async Task A_participant_gets_their_place_on_the_masterclass_leaderboard()
+    {
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app), sqlServer.Connection);
+        var phone = _app.CreateClient();
+        var join = await phone.PostAsJsonAsync("/api/participants/join", new { joinCode });
+        var token = Assert.Single(join.Headers.GetValues("Set-Cookie"), c => c.StartsWith("mq_participant="))
+            .Split(';')[0]["mq_participant=".Length..];
+        Assert.Equal(HttpStatusCode.NotFound, (await phone.GetAsync("/api/participants/me/place")).StatusCode);
+
+        // The only Participant answers the first Workshop's one Question correctly; it is revealed at once.
+        var engine = new QuizEngine(sqlServer.Connection, TimeProvider.System);
+        var courseId = (await engine.GetMasterclassAsync(id))!.CourseId;
+        var workshopId = (await engine.ListCoursesAsync()).Single(c => c.Id == courseId).Workshops.Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
+        var started = await engine.StartSessionAsync(id, workshopId, new DifficultyCounts(1, 0, 0));
+        Assert.Equal(AnswerResult.Accepted, (await engine.SubmitAnswerAsync(token, started.Session!.FirstQuestion.QuestionId, 1)).Result);
+        Assert.NotNull(await engine.RevealQuestionAsync(started.Session.Id));
+
+        var place = await phone.GetFromJsonAsync<JsonObject>("/api/participants/me/place");
+
+        Assert.Equal((1, 1), ((int)place!["rank"]!, (int)place["of"]!));
+        Assert.InRange((int)place["points"]!, 1, 500);
+    }
+
+    [Fact]
+    public async Task Without_a_known_cookie_there_is_no_place()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _app.CreateClient().GetAsync("/api/participants/me/place")).StatusCode);
     }
 
     public void Dispose() => _app.Dispose();

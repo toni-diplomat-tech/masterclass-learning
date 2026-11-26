@@ -18,8 +18,9 @@ public static class ParticipantEndpoints
 
     /// <summary>
     /// Maps <c>POST /api/participants/join</c> (<c>{joinCode}</c>: sets the cookie and answers with the
-    /// Participant, 404 problem for a code of no Open Masterclass) and <c>GET /api/participants/me</c>
-    /// (the cookie's Participant, 401 without one).
+    /// Participant, 404 problem for a code of no Open Masterclass), <c>GET /api/participants/me</c>
+    /// (the cookie's Participant, 401 without one) and <c>GET /api/participants/me/place</c> (their
+    /// <c>{rank, points, of}</c> on the Masterclass leaderboard; 404 while they are not on it, 401 without one).
     /// </summary>
     public static IEndpointRouteBuilder MapParticipantEndpoints(this IEndpointRouteBuilder app)
     {
@@ -49,6 +50,18 @@ public static class ParticipantEndpoints
             && await engine.GetParticipantAsync(token, cancellationToken) is { } participant
                 ? Results.Ok(participant)
                 : Results.Unauthorized());
+
+        participants.MapGet("/me/place", async (HttpContext context, QuizEngine engine, CancellationToken cancellationToken) =>
+        {
+            if (context.Request.Cookies[CookieName] is not { Length: > 0 } token
+                || await engine.GetParticipantAsync(token, cancellationToken) is null)
+            {
+                return Results.Unauthorized();
+            }
+            return await engine.GetMasterclassPlaceAsync(token, cancellationToken) is { } place
+                ? Results.Ok(place)
+                : Results.NotFound();
+        });
 
         return app;
     }

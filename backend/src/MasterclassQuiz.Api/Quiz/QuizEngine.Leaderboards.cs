@@ -26,4 +26,19 @@ public sealed partial class QuizEngine
         parameters.Add("MasterclassId", masterclassId);
         return ProcedureJson.Read<MasterclassLeaderboard>(await QueryJsonAsync("dbo.GetMasterclassLeaderboard", parameters, cancellationToken));
     }
+
+    /// <summary>
+    /// The place on their Masterclass leaderboard of the Participant whose token this is; null if there is no
+    /// such Participant or they are not on it (no Answer to a revealed Question yet).
+    /// </summary>
+    public async Task<MasterclassPlace?> GetMasterclassPlaceAsync(string participantToken, CancellationToken cancellationToken = default)
+    {
+        if (await GetParticipantAsync(participantToken, cancellationToken) is not { } participant
+            || await GetMasterclassLeaderboardAsync(participant.MasterclassId, cancellationToken) is not { } leaderboard)
+        {
+            return null;
+        }
+        var me = leaderboard.Entries.SingleOrDefault(entry => entry.ParticipantId == participant.Id);
+        return me is null ? null : new MasterclassPlace(me.Rank, me.Points, leaderboard.Entries.Count);
+    }
 }
