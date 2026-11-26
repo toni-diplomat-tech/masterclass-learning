@@ -81,6 +81,27 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task The_next_workshop_moves_on_as_soon_as_its_session_starts()
+    {
+        var ready = await ReadySessionFixture.PrepareAsync(Engine, sqlServer.Connection, _time, participants: 0, easy: 1);
+        var testDoublesId = await Engine.WorkshopIdAsync(ready.MasterclassId, "test-doubles");
+        var beforeAny = await Engine.GetMasterclassAsync(ready.MasterclassId);
+
+        var first = await Engine.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix);
+        var whileFirstRuns = await Engine.GetMasterclassAsync(ready.MasterclassId);
+        _time.Advance(TimeSpan.FromMilliseconds(3_500));
+        await Engine.RevealQuestionAsync(first.Session!.Id);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        await Engine.AdvanceSessionAsync(first.Session.Id);
+        Assert.Empty((await Engine.StartSessionAsync(ready.MasterclassId, testDoublesId, new DifficultyCounts(1, 0, 0))).Problems);
+        var afterAll = await Engine.GetMasterclassAsync(ready.MasterclassId);
+
+        Assert.Equal(
+            (ready.WorkshopId, testDoublesId, (int?)null),
+            (beforeAny!.NextWorkshopId, whileFirstRuns!.NextWorkshopId, afterAll!.NextWorkshopId));
+    }
+
+    [Fact]
     public async Task The_progress_says_what_the_session_waits_for_and_until_when()
     {
         var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
