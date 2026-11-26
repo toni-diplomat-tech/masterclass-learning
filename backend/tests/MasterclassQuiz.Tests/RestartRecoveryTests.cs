@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace MasterclassQuiz.Tests;
 
 /// <summary>
-/// The backend restarts mid-Session: on startup it follows every running Session again, so an overdue
-/// Question is revealed (Timed out for whoever didn't answer) and the Session carries on to its end.
+/// The backend restarts mid-Session: on startup it resumes every running Session through the live Masterclass
+/// module, so an overdue Question is revealed (Timed out for whoever didn't answer) and the Session carries on
+/// to its end.
 /// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class RestartRecoveryTests(SqlServerFixture sqlServer)

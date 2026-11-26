@@ -10,8 +10,9 @@ import type {
   SessionLeaderboard,
 } from "./types";
 
-// The wire contract with the backend's Quiz hub (backend Live/QuizHub.cs, QuizHub.Recovery.cs,
-// MasterclassNotifier.cs; Quiz/CurrentState.cs), and the seam the module's two adapters plug into:
+// The wire contract with the backend's Quiz hub: backend Live/QuizHub.cs and QuizHub.Recovery.cs (calls and
+// message names), Live/LiveMasterclass.cs (which change sends which broadcast, through the broadcast port in
+// Live/MasterclassBroadcasts.cs) and Quiz/CurrentState.cs. Also the seam the module's two adapters plug into:
 // signalr-hub.ts (the real one) and fake-hub.ts (in memory, for tests). Nothing here leaves the module.
 
 /** Server → clients broadcasts to a Masterclass, by name. Every message names its Masterclass. */
