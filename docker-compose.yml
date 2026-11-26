@@ -28,6 +28,8 @@ services:
       dockerfile: backend/Dockerfile
     environment:
       ConnectionStrings__Quiz: "Server=sqlserver,1433;Database=MasterclassQuiz;User Id=sa;Password=${MSSQL_SA_PASSWORD:-LocalDev_Passw0rd};TrustServerCertificate=True"
+      # Without it every Host login is refused. See README "Host password".
+      HOST_PASSWORD_HASH: ${HOST_PASSWORD_HASH:-}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:

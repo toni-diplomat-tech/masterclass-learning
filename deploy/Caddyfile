@@ -1,0 +1,12 @@
+# Caddy gets and renews the HTTPS certificate for $DOMAIN automatically.
+# The SignalR hub (/hubs/*) goes straight to the backend (WebSockets pass through as is); everything
+# else goes to the frontend, which reaches the backend over the compose network.
+{$DOMAIN} {
+	handle /hubs/* {
+		reverse_proxy backend:8080
+	}
+	handle {
+		encode
+		reverse_proxy frontend:3000
+	}
+}
