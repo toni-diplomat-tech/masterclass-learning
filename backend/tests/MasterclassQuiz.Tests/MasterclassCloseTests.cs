@@ -61,7 +61,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
         var session = await RunOneQuestionSessionAsync();
         await Engine.CloseMasterclassAsync(session.MasterclassId);
 
-        var started = await Engine.StartSessionAsync(session.MasterclassId, await WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(session.MasterclassId, await Engine.WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
 
         Assert.Equal(["Sessions can only start in an Open Masterclass."], started.Problems);
     }
@@ -144,12 +144,6 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
         await Engine.RevealQuestionAsync(session.SessionId);
         Assert.NotNull((await Engine.AdvanceSessionAsync(session.SessionId)).Ended);
         return session;
-    }
-
-    private async Task<int> WorkshopIdAsync(int masterclassId, string slug)
-    {
-        var courseId = (await Engine.GetMasterclassAsync(masterclassId))!.CourseId;
-        return (await Engine.ListCoursesAsync()).Single(c => c.Id == courseId).Workshops.Single(w => w.Slug == slug).Id;
     }
 
     private async Task<MasterclassOverview> OpenMasterclassAsync(Random? random = null)

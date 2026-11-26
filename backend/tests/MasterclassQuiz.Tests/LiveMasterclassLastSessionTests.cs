@@ -23,7 +23,7 @@ public sealed class LiveMasterclassLastSessionTests(SqlServerFixture sqlServer) 
         await _live.Broadcasts.NextAsync<SessionEnded>(QuizHub.SessionEnded);
         await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
 
-        var lastSessionId = await RunSessionAsync(ready.MasterclassId, await LastWorkshopIdAsync(ready.MasterclassId));
+        var lastSessionId = await RunSessionAsync(ready.MasterclassId, await _live.Engine.WorkshopIdAsync(ready.MasterclassId, LastWorkshopSlug));
 
         var ended = await _live.Broadcasts.NextAsync<SessionEnded>(QuizHub.SessionEnded);
         Assert.Equal(lastSessionId, ended.SessionId);
@@ -76,13 +76,5 @@ public sealed class LiveMasterclassLastSessionTests(SqlServerFixture sqlServer) 
         await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
         await _live.Time.AdvanceWhenTimerWaitsAsync(RevealPause);
         return started.SessionId;
-    }
-
-    private async Task<int> LastWorkshopIdAsync(int masterclassId)
-    {
-        var courseId = (await _live.Engine.GetMasterclassAsync(masterclassId))!.CourseId;
-        return (await _live.Engine.ListCoursesAsync())
-            .Single(c => c.Id == courseId).Workshops
-            .Single(w => w.Slug == LastWorkshopSlug).Id;
     }
 }
