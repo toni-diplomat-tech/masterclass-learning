@@ -109,7 +109,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_masterclass_can_not_be_closed_while_a_session_runs()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
 
         var closed = await Engine.CloseMasterclassAsync(session.MasterclassId);
 
@@ -139,7 +139,7 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     // A Masterclass whose "unit-tests" Session ran its one Easy Question (answered correctly) and ended.
     private async Task<RunningSessionFixture> RunOneQuestionSessionAsync()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(session.SessionId);
         Assert.NotNull((await Engine.AdvanceSessionAsync(session.SessionId)).Ended);
@@ -157,6 +157,6 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
         var engine = new QuizEngine(sqlServer.Connection, _time, random);
         var import = await engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
         var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        return (await engine.OpenMasterclassAsync(created.Masterclass!.Id))!;
+        return await engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id, sqlServer.Connection, _time);
     }
 }

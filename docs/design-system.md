@@ -34,6 +34,7 @@ The system sans stack for text. Headings are black weight with tight tracking. J
 - **Button**: pill, `primary` (red fill) / `secondary` (surface) / `danger` (red outline, filled on hover) / `ghost`; `md` / `lg`; `block`; `loading` shows a spinner and disables it. `buttonClass()` styles a link as a button.
 - **Card**: raised surface with a shadow; `glass` gives the frosted sheet (the start-Session dialog).
 - **Notice**: status or alert text with a coloured left edge (`info` / `success` / `error`).
+- **ProblemsNotice**: an `error` Notice listing why an action was refused, one problem per line; nothing when there are none.
 - **OptionTile / OptionTiles**: a letter badge plus the option text; `idle` / `selected` (red edge and badge) / `correct` (green edge, ✓ badge, small pop) / `wrong` (muted). One column on the phone, two on the projector.
 - **Leaderboard**: rows with a mono rank and points; rank 1 has a red edge, ranks 2 and 3 a raised surface; `highlight` outlines one Participant in green; rows rise in one after another.
 - **Page / Stack / Chips / Eyebrow**: the `<main>` width per screen, vertical rhythm, the meta chips (Workshop · Question n of m · Difficulty) and small uppercase labels.

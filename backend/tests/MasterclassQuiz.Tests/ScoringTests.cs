@@ -23,7 +23,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_correct_answer_given_at_once_scores_the_full_base_points()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
 
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(session.SessionId);
@@ -40,7 +40,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [InlineData(3_500, 250)] // the last moment of the grace period
     public async Task A_correct_answer_scores_less_the_longer_it_took(int elapsedMs, int points)
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromMilliseconds(elapsedMs));
 
         Assert.Equal(AnswerResult.Accepted, (await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1)).Result);
@@ -52,7 +52,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Harder_questions_are_worth_more_and_the_session_sums_them()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1, medium: 1, hard: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1, medium: 1, hard: 1);
         var scored = new List<(int Points, int QuestionPoints)>();
 
         var question = session.Question;
@@ -72,7 +72,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Incorrect_and_timed_out_answers_score_nothing()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 2);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
         await Engine.RevealQuestionAsync(session.SessionId);
@@ -85,7 +85,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Points_count_only_once_the_question_is_revealed()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
 
         var leaderboard = await Engine.GetSessionLeaderboardAsync(session.SessionId);
@@ -97,7 +97,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Participants_with_the_same_points_share_a_rank()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 4, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 4, easy: 1);
         var nicknames = new List<string>();
         foreach (var token in session.Tokens)
         {
@@ -126,7 +126,7 @@ public sealed class ScoringTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_final_leaderboard_says_the_session_ended()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         await Engine.RevealQuestionAsync(session.SessionId);
         _time.Advance(TimeSpan.FromSeconds(2));

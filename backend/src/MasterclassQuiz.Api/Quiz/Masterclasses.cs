@@ -31,6 +31,14 @@ public sealed record MasterclassCreateResult(MasterclassOverview? Masterclass, I
 }
 
 /// <summary>
+/// The Masterclass after an open (null if there is none), and every reason it wasn't opened (empty: it is Open).
+/// </summary>
+public sealed record MasterclassOpenResult(MasterclassOverview? Masterclass, IReadOnlyList<string> Problems)
+{
+    public bool Succeeded => Problems.Count == 0 && Masterclass is { Status: MasterclassStatus.Open };
+}
+
+/// <summary>
 /// The Masterclass after a close (null if there is none), and every reason it wasn't closed (empty: it is Closed).
 /// </summary>
 public sealed record MasterclassCloseResult(MasterclassOverview? Masterclass, IReadOnlyList<string> Problems)

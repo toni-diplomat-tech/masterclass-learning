@@ -54,13 +54,7 @@ export async function createMasterclass(courseId: number, name: string): Promise
  * Refused (with problems) for a Draft or while a Session runs.
  */
 export async function closeMasterclass(id: number): Promise<{ problems: string[] }> {
-  const response = await hostFetch(`/api/host/masterclasses/${id}/close`, { method: "POST" });
-  if (response.ok) return { problems: [] };
-  if (response.status === 409) {
-    const problem: { problems?: string[] } = await response.json();
-    if (problem.problems?.length) return { problems: problem.problems };
-  }
-  throw new Error(`Closing the Masterclass failed: HTTP ${response.status}`);
+  return changeMasterclass(id, "close", "Closing the Masterclass failed");
 }
 
 /** One Participant on the Masterclass leaderboard. Equal points share a rank (1, 1, 3). */
@@ -77,8 +71,22 @@ export async function getMasterclassLeaderboard(id: number): Promise<Masterclass
   return response.json();
 }
 
-/** Opens a Draft Masterclass, which gives it its Join code. */
-export async function openMasterclass(id: number): Promise<void> {
-  const response = await hostFetch(`/api/host/masterclasses/${id}/open`, { method: "POST" });
-  if (!response.ok) throw new Error(`Opening the Masterclass failed: HTTP ${response.status}`);
+/**
+ * Opens a Draft Masterclass, which gives it its Join code. Only one Masterclass can be Open at a time, so
+ * it is refused (with problems, e.g. which Masterclass to close first) while another one is Open.
+ */
+export async function openMasterclass(id: number): Promise<{ problems: string[] }> {
+  return changeMasterclass(id, "open", "Opening the Masterclass failed");
+}
+
+// POSTs a change to one Masterclass: no problems when it was made, the backend's problems when it was
+// refused (409). Anything else throws, starting with `failure`.
+async function changeMasterclass(id: number, change: "open" | "close", failure: string): Promise<{ problems: string[] }> {
+  const response = await hostFetch(`/api/host/masterclasses/${id}/${change}`, { method: "POST" });
+  if (response.ok) return { problems: [] };
+  if (response.status === 409) {
+    const problem: { problems?: string[] } = await response.json();
+    if (problem.problems?.length) return { problems: problem.problems };
+  }
+  throw new Error(`${failure}: HTTP ${response.status}`);
 }

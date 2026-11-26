@@ -21,15 +21,17 @@ public sealed partial class QuizEngine
     }
 
     /// <summary>
-    /// Opens a Draft Masterclass with a 6-digit Join code unique among Open Masterclasses. An Open one keeps
-    /// its code and a Closed one stays Closed. Returns the Masterclass as it now is; null if there is none.
+    /// Opens a Draft Masterclass with a 6-digit Join code. Only one Masterclass can be Open at a time, so a
+    /// Draft can't open while another Masterclass is Open, and a Closed one can't open again. Opening the
+    /// Open one again keeps its code. <see cref="MasterclassOpenResult.Masterclass"/> is the Masterclass as
+    /// it now is (null if there is none).
     /// </summary>
-    public async Task<MasterclassOverview?> OpenMasterclassAsync(int masterclassId, CancellationToken cancellationToken = default)
+    public async Task<MasterclassOpenResult> OpenMasterclassAsync(int masterclassId, CancellationToken cancellationToken = default)
     {
         var parameters = new DynamicParameters();
         parameters.Add("MasterclassId", masterclassId);
-        await ExecuteAsync("dbo.OpenMasterclass", WithNow(WithSeed(parameters)), cancellationToken);
-        return await GetMasterclassAsync(masterclassId, cancellationToken);
+        var problems = await QueryListAsync<string>("dbo.OpenMasterclass", WithNow(WithSeed(parameters)), cancellationToken);
+        return new MasterclassOpenResult(await GetMasterclassAsync(masterclassId, cancellationToken), problems);
     }
 
     /// <summary>

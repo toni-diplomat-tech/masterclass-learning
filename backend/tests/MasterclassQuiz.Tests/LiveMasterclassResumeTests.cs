@@ -58,7 +58,7 @@ public sealed class LiveMasterclassResumeTests(SqlServerFixture sqlServer) : IDi
     [Fact]
     public async Task Resuming_a_session_the_timer_already_follows_broadcasts_nothing_more()
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants: 1, easy: 2);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 2);
         Assert.Empty(await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix));
         await _live.Broadcasts.NextAsync<QuestionStarted>(QuizHub.QuestionStarted);
 
@@ -94,7 +94,7 @@ public sealed class LiveMasterclassResumeTests(SqlServerFixture sqlServer) : IDi
     // whose first Question's Answers have closed: one Participant, who didn't answer.
     private async Task<RunningSessionFixture> OverdueSessionAsync(int easy)
     {
-        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: easy);
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: easy);
         _live.Time.Advance(AnswersClose); // nobody waits on the clock yet
         return session;
     }

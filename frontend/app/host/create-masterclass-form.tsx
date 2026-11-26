@@ -3,10 +3,10 @@
 import { useActionState } from "react";
 import { Button } from "@/components/button";
 import { Notice } from "@/components/notice";
-import { createMasterclassAction, type CreateMasterclassState } from "./actions";
+import { createMasterclassAction, type MasterclassActionState } from "./actions";
 import styles from "./host.module.scss";
 
-const initialState: CreateMasterclassState = {};
+const initialState: MasterclassActionState = {};
 
 export function CreateMasterclassForm({ courses }: { courses: { id: number; title: string }[] }) {
   const [state, formAction, pending] = useActionState(createMasterclassAction, initialState);

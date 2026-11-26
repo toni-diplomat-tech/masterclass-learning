@@ -79,12 +79,13 @@ export async function importCourseFile(_previous: ImportState, formData: FormDat
   }
 }
 
-export type CreateMasterclassState = { problems?: string[]; error?: string };
+/** What a Masterclass action tells its form: the backend's problems when it was refused, or an error. */
+export type MasterclassActionState = { problems?: string[]; error?: string };
 
 export async function createMasterclassAction(
-  _previous: CreateMasterclassState,
+  _previous: MasterclassActionState,
   formData: FormData,
-): Promise<CreateMasterclassState> {
+): Promise<MasterclassActionState> {
   const courseId = Number(formData.get("courseId"));
   const name = textField(formData, "name");
 
@@ -99,23 +100,31 @@ export async function createMasterclassAction(
   }
 }
 
-export type CloseMasterclassState = { problems?: string[]; error?: string };
-
 /** Closes the Masterclass from its projector view, which then shows the Masterclass leaderboard. */
-export async function closeMasterclassAction(masterclassId: number): Promise<CloseMasterclassState> {
+export async function closeMasterclassAction(masterclassId: number): Promise<MasterclassActionState> {
+  return changeMasterclass(() => closeMasterclass(masterclassId), "Closing the Masterclass failed. Try again.");
+}
+
+/**
+ * Opens a Draft Masterclass from its projector view, which then shows the Join code. Refused (with
+ * problems) while another Masterclass is Open, naming the one to close first.
+ */
+export async function openMasterclassAction(masterclassId: number): Promise<MasterclassActionState> {
+  return changeMasterclass(() => openMasterclass(masterclassId), "Opening the Masterclass failed. Try again.");
+}
+
+// Makes the change and refreshes the page, or passes on why it was refused; `failure` is for anything else.
+async function changeMasterclass(
+  change: () => Promise<{ problems: string[] }>,
+  failure: string,
+): Promise<MasterclassActionState> {
   try {
-    const { problems } = await closeMasterclass(masterclassId);
+    const { problems } = await change();
     if (problems.length > 0) return { problems };
     refresh();
     return {};
   } catch (error) {
     unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
-    return { error: "Closing the Masterclass failed. Try again." };
+    return { error: failure };
   }
-}
-
-/** Opens a Draft Masterclass from its projector view, which then shows the Join code. */
-export async function openMasterclassAction(masterclassId: number): Promise<void> {
-  await openMasterclass(masterclassId);
-  refresh();
 }

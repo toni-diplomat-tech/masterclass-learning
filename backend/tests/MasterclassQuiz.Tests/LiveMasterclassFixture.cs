@@ -37,9 +37,13 @@ public sealed class LiveMasterclassFixture : IDisposable
     /// <param name="database">Another database on the test server to use instead of the shared one.</param>
     public LiveMasterclassFixture(SqlServerFixture sqlServer, QuizSettings? settings = null, DatabaseConnection? database = null)
     {
-        Engine = new QuizEngine(database ?? sqlServer.Connection, Time, settings: settings ?? ShortTimings);
+        Database = database ?? sqlServer.Connection;
+        Engine = new QuizEngine(Database, Time, settings: settings ?? ShortTimings);
         Live = new LiveMasterclass(Engine, Broadcasts, Time, _lifetime, NullLogger<LiveMasterclass>.Instance);
     }
+
+    /// <summary>The database of the Quiz engine.</summary>
+    public DatabaseConnection Database { get; }
 
     /// <summary>
     /// The clock of both the Quiz engine and the module; advance it to move time on. To move the backend
@@ -62,7 +66,7 @@ public sealed class LiveMasterclassFixture : IDisposable
         var import = await Engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
         Assert.Empty(import.Problems);
         var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        return (await Engine.OpenMasterclassAsync(created.Masterclass!.Id))!;
+        return await Engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id, Database, Time);
     }
 
     public void Dispose() => _lifetime.Stop();

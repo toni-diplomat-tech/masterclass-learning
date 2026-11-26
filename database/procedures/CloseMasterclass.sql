@@ -1,5 +1,5 @@
--- Closes an Open Masterclass when the meeting ends: no more joining or Sessions, and its Join code is
--- free for other Open Masterclasses (the unique index covers Open ones only; the Closed row keeps it).
+-- Closes an Open Masterclass when the meeting ends: no more joining or Sessions, and since only one
+-- Masterclass can be Open at a time, a Draft can now open (the Closed row keeps its Join code).
 -- Closing a Closed Masterclass again changes nothing. Takes time only from @Now.
 --
 -- Result set: the problems (one nvarchar per row); empty when the Masterclass is now Closed. An unknown

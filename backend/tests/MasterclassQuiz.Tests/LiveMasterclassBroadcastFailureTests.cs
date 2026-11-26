@@ -16,7 +16,7 @@ public sealed class LiveMasterclassBroadcastFailureTests(SqlServerFixture sqlSer
     [Fact]
     public async Task A_session_whose_first_question_broadcast_fails_still_starts_and_the_timer_reveals_it()
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants: 1, easy: 2);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 2);
         _live.Broadcasts.Fail(QuizHub.QuestionStarted);
 
         var problems = await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix);
@@ -30,7 +30,7 @@ public sealed class LiveMasterclassBroadcastFailureTests(SqlServerFixture sqlSer
     [Fact]
     public async Task Answers_are_accepted_and_the_last_one_reveals_the_question_even_if_the_answer_count_broadcast_fails()
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants: 2, easy: 2);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants: 2, easy: 2);
         Assert.Empty(await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix));
         var question = await _live.Broadcasts.NextAsync<QuestionStarted>(QuizHub.QuestionStarted);
         _live.Broadcasts.Fail(QuizHub.AnswerCountUpdated);

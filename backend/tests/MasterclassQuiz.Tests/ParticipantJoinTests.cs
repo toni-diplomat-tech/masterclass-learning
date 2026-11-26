@@ -47,9 +47,10 @@ public sealed class ParticipantJoinTests(SqlServerFixture sqlServer)
     public async Task The_same_nickname_can_be_drawn_in_another_masterclass()
     {
         var first = await OpenMasterclassAsync();
+        var inFirst = await new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now), new Random(7)).JoinMasterclassAsync(first.JoinCode!, null);
+        await _engine.CloseMasterclassAsync(first.Id);
         var second = await OpenMasterclassAsync();
 
-        var inFirst = await new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now), new Random(7)).JoinMasterclassAsync(first.JoinCode!, null);
         var inSecond = await new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now), new Random(7)).JoinMasterclassAsync(second.JoinCode!, null);
 
         Assert.Equal(inFirst!.Participant.Nickname, inSecond!.Participant.Nickname);
@@ -109,20 +110,21 @@ public sealed class ParticipantJoinTests(SqlServerFixture sqlServer)
     public async Task A_token_from_another_masterclass_joins_as_a_new_participant()
     {
         var earlier = await OpenMasterclassAsync();
-        var later = await OpenMasterclassAsync();
         var inEarlier = await _engine.JoinMasterclassAsync(earlier.JoinCode!, currentToken: null);
+        await _engine.CloseMasterclassAsync(earlier.Id);
+        var later = await OpenMasterclassAsync();
 
         var inLater = await _engine.JoinMasterclassAsync(later.JoinCode!, inEarlier!.Token);
 
         Assert.Equal(later.Id, inLater!.Participant.MasterclassId);
         Assert.NotEqual(inEarlier.Token, inLater.Token);
-        Assert.Equal(inEarlier.Participant, await _engine.GetParticipantAsync(inEarlier.Token));
+        Assert.Equal(inEarlier.Participant with { MasterclassStatus = MasterclassStatus.Closed }, await _engine.GetParticipantAsync(inEarlier.Token));
     }
 
     private async Task<MasterclassOverview> OpenMasterclassAsync()
     {
         var course = (await _engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString())).Outcome!;
         var draft = (await _engine.CreateMasterclassAsync(course.CourseId, "Dev team 2026")).Masterclass!;
-        return (await _engine.OpenMasterclassAsync(draft.Id))!;
+        return await _engine.OpenAsOnlyOpenMasterclassAsync(draft.Id, sqlServer.Connection, new FakeTimeProvider(Now));
     }
 }

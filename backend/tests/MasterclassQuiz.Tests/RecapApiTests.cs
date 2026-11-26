@@ -15,7 +15,7 @@ public sealed class RecapApiTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task The_participant_gets_their_recap_link_and_anyone_can_read_it_without_logging_in()
     {
-        var (id, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app));
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app), sqlServer.Connection);
         var phone = _app.CreateClient();
         var joined = await (await phone.PostAsJsonAsync("/api/participants/join", new { joinCode })).Content.ReadFromJsonAsync<JsonObject>();
 

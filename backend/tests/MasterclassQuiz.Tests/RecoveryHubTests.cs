@@ -29,7 +29,7 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_reloaded_phone_gets_the_running_question_and_its_locked_answer_but_not_the_correct_option()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, TimeProvider.System, participants: 1, easy: 1);
         var cookie = $"{ParticipantEndpoints.CookieName}={session.Tokens[0]}";
         await using (var before = await ConnectedAsync(cookie))
         {
@@ -50,7 +50,7 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_reloaded_projector_gets_the_running_question_with_its_answer_count()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, TimeProvider.System, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         await using var projector = await ConnectedAsync(await HostCookieAsync());
 
@@ -64,8 +64,8 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
     [Fact]
     public async Task A_stranger_gets_no_state_and_cannot_resume()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
-        var other = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, TimeProvider.System, participants: 1, easy: 1);
+        var other = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, TimeProvider.System, participants: 1, easy: 1);
         await using var stranger = await ConnectedAsync(cookie: null);
         await using var otherPhone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={other.Tokens[0]}");
         await using var phone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={session.Tokens[0]}");

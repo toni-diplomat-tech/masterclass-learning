@@ -16,7 +16,7 @@ public sealed class LiveMasterclassSessionTests(SqlServerFixture sqlServer) : ID
     [Fact]
     public async Task Starting_a_session_broadcasts_its_first_question()
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants: 1, easy: 2);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 2);
 
         var problems = await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix);
 
@@ -30,7 +30,7 @@ public sealed class LiveMasterclassSessionTests(SqlServerFixture sqlServer) : ID
     [Fact]
     public async Task A_refused_start_broadcasts_nothing()
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants: 1, easy: 1);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 1);
 
         var problems = await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, new DifficultyCounts(2, 0, 0));
 
@@ -113,7 +113,7 @@ public sealed class LiveMasterclassSessionTests(SqlServerFixture sqlServer) : ID
     // Starts a Session through the module and takes its first QuestionStarted broadcast.
     private async Task<QuestionStarted> StartAsync(int participants, int easy)
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants, easy);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants, easy);
         Assert.Empty(await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix));
         return await _live.Broadcasts.NextAsync<QuestionStarted>(QuizHub.QuestionStarted);
     }

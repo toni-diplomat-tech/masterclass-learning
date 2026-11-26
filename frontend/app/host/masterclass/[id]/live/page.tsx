@@ -4,8 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Suspense } from "react";
-import { openMasterclassAction } from "@/app/host/actions";
-import { Button } from "@/components/button";
 import { Eyebrow, Page } from "@/components/page";
 import { listCourses } from "@/lib/courses";
 import { requireHost } from "@/lib/host-session";
@@ -13,6 +11,7 @@ import { getMasterclass, getMasterclassLeaderboard, type MasterclassOverview } f
 import { CloseMasterclassForm } from "./close-masterclass-form";
 import { LiveMasterclass } from "./live-masterclass";
 import { MasterclassLeaderboardTable } from "./masterclass-leaderboard";
+import { OpenMasterclassForm } from "./open-masterclass-form";
 import styles from "./projector.module.scss";
 
 export const metadata: Metadata = { title: "Projector · Masterclass Quiz" };
@@ -49,7 +48,7 @@ async function Projector({ params }: { params: Promise<{ id: string }> }) {
       </div>
       <div className={styles.screen}>
         <h1 className={styles.title}>{masterclass.name}</h1>
-        {masterclass.status === "Draft" && <OpenMasterclass masterclass={masterclass} />}
+        {masterclass.status === "Draft" && <OpenMasterclassForm masterclassId={masterclass.id} />}
         {masterclass.status === "Open" && <OpenProjector masterclass={masterclass} />}
         {masterclass.status === "Closed" && <ClosedProjector masterclass={masterclass} />}
       </div>
@@ -65,17 +64,6 @@ async function ClosedProjector({ masterclass }: { masterclass: MasterclassOvervi
       <p className={styles.muted}>This Masterclass is closed.</p>
       {leaderboard && <MasterclassLeaderboardTable leaderboard={leaderboard} />}
     </>
-  );
-}
-
-function OpenMasterclass({ masterclass }: { masterclass: MasterclassOverview }) {
-  return (
-    <form action={openMasterclassAction.bind(null, masterclass.id)} className={styles.openForm}>
-      <p className={styles.muted}>Open the Masterclass when the meeting starts. Participants can then join with its Join code.</p>
-      <Button type="submit" size="lg">
-        Open Masterclass
-      </Button>
-    </form>
   );
 }
 

@@ -31,7 +31,7 @@ public sealed class LiveMasterclassRetryTests : IDisposable
     [Fact]
     public async Task After_a_quiz_engine_error_the_timer_retries_and_the_session_carries_on_once_the_database_is_back()
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants: 1, easy: 2);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 2);
         Assert.Empty(await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix));
         var first = await _live.Broadcasts.NextAsync<QuestionStarted>(QuizHub.QuestionStarted);
         await _live.Time.WaitForTimerAsync();
