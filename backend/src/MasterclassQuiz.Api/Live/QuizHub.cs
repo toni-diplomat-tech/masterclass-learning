@@ -121,21 +121,4 @@ public sealed record SessionStartReply(IReadOnlyList<string> Problems);
 
 public sealed record AnswerReply(AnswerResult Result);
 
-/// <summary>Live updates sent from outside the hub, e.g. after a Participant joins over REST.</summary>
-public sealed class ParticipantNotifier(IHubContext<QuizHub> hub, QuizEngine engine)
-{
-    public async Task ParticipantJoinedAsync(int masterclassId, CancellationToken cancellationToken = default)
-    {
-        var masterclass = await engine.GetMasterclassAsync(masterclassId, cancellationToken);
-        if (masterclass is null)
-        {
-            return;
-        }
-        await hub.Clients.Group(QuizHub.MasterclassGroup(masterclassId)).SendAsync(
-            QuizHub.ParticipantCountUpdated,
-            new ParticipantCount(masterclassId, masterclass.Participants),
-            cancellationToken);
-    }
-}
-
 public sealed record ParticipantCount(int MasterclassId, int Participants);
