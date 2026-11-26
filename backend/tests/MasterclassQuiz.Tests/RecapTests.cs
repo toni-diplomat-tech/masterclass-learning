@@ -131,8 +131,7 @@ public sealed class RecapTests(SqlServerFixture sqlServer)
         var participant = await meeting.JoinAsync();
 
         await meeting.RunSessionAsync("unit-tests", new() { [participant] = _ => 1 });
-        file.MoveWorkshopLast("unit-tests");
-        Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
+        await Engine.ReimportWithWorkshopLastAsync(file, "unit-tests");
         var withOne = await RecapOfAsync(participant);
         await meeting.RunSessionAsync("test-doubles", new() { [participant] = _ => 1 });
         var withBoth = await RecapOfAsync(participant);

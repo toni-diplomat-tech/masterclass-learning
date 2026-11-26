@@ -193,14 +193,7 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     {
         var file = SessionFiles.WithWorkshopQuestions(easy: 1, medium: 0, hard: 0);
         var meeting = await OpenMeetingAsync(file);
-        // Re-import without the first Workshop: it is retired, with its Lessons and Questions.
-        var unitTests = file["workshops"]!.AsArray()[0]!.AsObject();
-        var lessons = unitTests["lessons"]!.AsArray().Select(l => (string)l!["slug"]!).ToHashSet();
-        file["workshops"]!.AsArray().Remove(unitTests);
-        foreach (var question in file["questions"]!.AsArray().Where(q => lessons.Contains((string)q!["lesson"]!)).ToList())
-        {
-            file["questions"]!.AsArray().Remove(question);
-        }
+        file.RetireWorkshop("unit-tests");
         Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
 
         var started = await Engine.StartSessionAsync(meeting.MasterclassId, await Engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));

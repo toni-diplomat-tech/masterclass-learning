@@ -55,8 +55,7 @@ public sealed class ResultsTests(SqlServerFixture sqlServer)
         var participant = await meeting.JoinAsync();
         var unitTests = await meeting.StartSessionAsync("unit-tests");
         await meeting.FinishSessionAsync(unitTests, new() { [participant] = _ => 1 });
-        file.MoveWorkshopLast("unit-tests");
-        Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
+        await Engine.ReimportWithWorkshopLastAsync(file, "unit-tests");
         var doubles = await meeting.StartSessionAsync("test-doubles");
         await Engine.SubmitAnswerAsync(participant, doubles.FirstQuestion.QuestionId, 1);
 
