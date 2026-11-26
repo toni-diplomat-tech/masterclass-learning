@@ -1,5 +1,6 @@
 using MasterclassQuiz.Api.Live;
 using MasterclassQuiz.Api.Quiz;
+using static MasterclassQuiz.Tests.LiveMasterclassFixture;
 
 namespace MasterclassQuiz.Tests;
 
@@ -11,17 +12,17 @@ namespace MasterclassQuiz.Tests;
 [Collection(nameof(SqlServerCollection))]
 public sealed class LiveMasterclassResumeTests(SqlServerFixture sqlServer) : IDisposable
 {
-    private readonly LiveMasterclassFixture _live = new(sqlServer, Settings);
+    private readonly LiveMasterclassFixture _live = new(sqlServer);
 
     [Fact]
     public async Task Resuming_a_masterclass_with_an_overdue_question_reveals_it_once_and_the_session_carries_on()
     {
-        var meeting = await OverdueSessionAsync(easy: 2);
+        var session = await OverdueSessionAsync(easy: 2);
 
-        await _live.Live.ResumeMasterclassAsync(meeting.MasterclassId);
+        await _live.Live.ResumeMasterclassAsync(session.MasterclassId);
 
         var revealed = await _live.Broadcasts.NextAsync<QuestionRevealed>(QuizHub.QuestionRevealed);
-        Assert.Equal((meeting.Question.QuestionId, 0, 1), (revealed.QuestionId, revealed.Answered, revealed.TimedOut));
+        Assert.Equal((session.Question.QuestionId, 0, 1), (revealed.QuestionId, revealed.Answered, revealed.TimedOut));
         await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
         await _live.Time.WaitForTimerAsync();
         await _live.Broadcasts.AssertQuietAsync();
@@ -29,18 +30,18 @@ public sealed class LiveMasterclassResumeTests(SqlServerFixture sqlServer) : IDi
         await _live.Time.AdvanceWhenTimerWaitsAsync(RevealPause);
 
         var next = await _live.Broadcasts.NextAsync<QuestionStarted>(QuizHub.QuestionStarted);
-        Assert.Equal((meeting.SessionId, 2), (next.SessionId, next.Number));
+        Assert.Equal((session.SessionId, 2), (next.SessionId, next.Number));
     }
 
     [Fact]
     public async Task Resuming_twice_reveals_the_overdue_question_once()
     {
-        var meeting = await OverdueSessionAsync(easy: 2);
+        var session = await OverdueSessionAsync(easy: 2);
 
         await Task.WhenAll(
-            _live.Live.ResumeMasterclassAsync(meeting.MasterclassId),
-            _live.Live.ResumeMasterclassAsync(meeting.MasterclassId));
-        await _live.Live.ResumeMasterclassAsync(meeting.MasterclassId);
+            _live.Live.ResumeMasterclassAsync(session.MasterclassId),
+            _live.Live.ResumeMasterclassAsync(session.MasterclassId));
+        await _live.Live.ResumeMasterclassAsync(session.MasterclassId);
 
         await _live.Broadcasts.NextAsync<QuestionRevealed>(QuizHub.QuestionRevealed);
         await _live.Broadcasts.NextAsync<SessionLeaderboard>(QuizHub.LeaderboardUpdated);
@@ -75,37 +76,26 @@ public sealed class LiveMasterclassResumeTests(SqlServerFixture sqlServer) : IDi
     [Fact]
     public async Task Resuming_after_the_session_ended_does_nothing()
     {
-        var meeting = await OverdueSessionAsync(easy: 1);
-        Assert.NotNull(await _live.Engine.RevealQuestionAsync(meeting.SessionId));
+        var session = await OverdueSessionAsync(easy: 1);
+        Assert.NotNull(await _live.Engine.RevealQuestionAsync(session.SessionId));
         _live.Time.Advance(RevealPause);
-        Assert.NotNull((await _live.Engine.AdvanceSessionAsync(meeting.SessionId)).Ended);
+        Assert.NotNull((await _live.Engine.AdvanceSessionAsync(session.SessionId)).Ended);
 
-        var resumed = await _live.Live.ResumeMasterclassAsync(meeting.MasterclassId);
+        var resumed = await _live.Live.ResumeMasterclassAsync(session.MasterclassId);
 
         Assert.Empty(resumed);
         await _live.Broadcasts.AssertQuietAsync();
-        Assert.Equal(SessionStep.Ended, (await _live.Engine.GetSessionProgressAsync(meeting.SessionId))!.Step);
+        Assert.Equal(SessionStep.Ended, (await _live.Engine.GetSessionProgressAsync(session.SessionId))!.Step);
     }
 
     public void Dispose() => _live.Dispose();
-
-    // Easy Questions have 3 seconds to answer, so Answers close 3.5 s after the start (with grace);
-    // a revealed Question stays up 2 seconds.
-    private static readonly QuizSettings Settings = new()
-    {
-        TimeLimitSeconds = new TimeLimitSeconds { Easy = 3 },
-        RevealPauseSeconds = 2,
-    };
-
-    private static readonly TimeSpan AnswersClose = TimeSpan.FromMilliseconds(3_500);
-    private static readonly TimeSpan RevealPause = TimeSpan.FromSeconds(2);
 
     // A Session started through the engine (so no backend timer follows it, as after a hiccup or a restart)
     // whose first Question's Answers have closed: one Participant, who didn't answer.
     private async Task<RunningSessionFixture> OverdueSessionAsync(int easy)
     {
-        var meeting = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: easy);
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: easy);
         _live.Time.Advance(AnswersClose); // nobody waits on the clock yet
-        return meeting;
+        return session;
     }
 }

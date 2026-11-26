@@ -20,30 +20,30 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_question_is_not_revealed_while_answers_still_count()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromMilliseconds(3_499));
 
-        Assert.Null(await Engine.RevealQuestionAsync(meeting.SessionId));
-        Assert.Equal(AnswerResult.Accepted, (await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 2)).Result);
+        Assert.Null(await Engine.RevealQuestionAsync(session.SessionId));
+        Assert.Equal(AnswerResult.Accepted, (await Engine.SubmitAnswerAsync(session.Tokens[1], session.Question.QuestionId, 2)).Result);
     }
 
     [Fact]
     public async Task The_reveal_shows_the_correct_option_and_how_many_chose_each_option()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 5, easy: 1);
-        var questionId = meeting.Question.QuestionId;
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], questionId, 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[1], questionId, 2);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[2], questionId, 2);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[3], questionId, 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 5, easy: 1);
+        var questionId = session.Question.QuestionId;
+        await Engine.SubmitAnswerAsync(session.Tokens[0], questionId, 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[1], questionId, 2);
+        await Engine.SubmitAnswerAsync(session.Tokens[2], questionId, 2);
+        await Engine.SubmitAnswerAsync(session.Tokens[3], questionId, 1);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
 
-        var revealed = await Engine.RevealQuestionAsync(meeting.SessionId);
+        var revealed = await Engine.RevealQuestionAsync(session.SessionId);
 
         Assert.NotNull(revealed);
         Assert.Equal(
-            (meeting.MasterclassId, meeting.SessionId, questionId, 1, 1, "Question easy-1?"),
+            (session.MasterclassId, session.SessionId, questionId, 1, 1, "Question easy-1?"),
             (revealed.MasterclassId, revealed.SessionId, revealed.QuestionId, revealed.Number, revealed.QuestionCount, revealed.Text));
         Assert.Equal(1, revealed.CorrectOption);
         Assert.Equal(
@@ -57,20 +57,20 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_re_import_while_a_question_runs_changes_neither_its_options_nor_its_correct_option()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        var questionId = meeting.Question.QuestionId;
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], questionId, 1);
-        meeting.ImportFile.Question("easy-1")["options"] = new JsonArray(
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var questionId = session.Question.QuestionId;
+        await Engine.SubmitAnswerAsync(session.Tokens[0], questionId, 1);
+        session.ImportFile.Question("easy-1")["options"] = new JsonArray(
             new JsonObject { ["text"] = "Wrong answer to easy-1" },
             new JsonObject { ["text"] = "Right answer to easy-1", ["correct"] = true });
-        Assert.Empty((await Engine.ImportCourseAsync(meeting.ImportFile.ToJsonString())).Problems);
+        Assert.Empty((await Engine.ImportCourseAsync(session.ImportFile.ToJsonString())).Problems);
 
-        var started = await Engine.GetStartedQuestionAsync(meeting.SessionId);
-        var late = await Engine.SubmitAnswerAsync(meeting.Tokens[1], questionId, 3);
+        var started = await Engine.GetStartedQuestionAsync(session.SessionId);
+        var late = await Engine.SubmitAnswerAsync(session.Tokens[1], questionId, 3);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
-        var revealed = await Engine.RevealQuestionAsync(meeting.SessionId);
+        var revealed = await Engine.RevealQuestionAsync(session.SessionId);
 
-        Assert.Equal(meeting.Question.Options, started!.Options);
+        Assert.Equal(session.Question.Options, started!.Options);
         Assert.Equal(AnswerResult.Accepted, late.Result);
         Assert.NotNull(revealed);
         Assert.Equal(1, revealed.CorrectOption);
@@ -82,13 +82,13 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_question_is_revealed_early_once_every_participant_has_answered()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromSeconds(1));
-        Assert.Null(await Engine.RevealQuestionAsync(meeting.SessionId));
+        Assert.Null(await Engine.RevealQuestionAsync(session.SessionId));
 
-        var last = await Engine.SubmitAnswerAsync(meeting.Tokens[1], meeting.Question.QuestionId, 3);
-        var revealed = await Engine.RevealQuestionAsync(meeting.SessionId);
+        var last = await Engine.SubmitAnswerAsync(session.Tokens[1], session.Question.QuestionId, 3);
+        var revealed = await Engine.RevealQuestionAsync(session.SessionId);
 
         Assert.True(last.Count!.EveryoneAnswered);
         Assert.NotNull(revealed);
@@ -99,32 +99,32 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Without_participants_a_question_runs_until_its_deadline()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 0, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 0, easy: 1);
 
-        Assert.Null(await Engine.RevealQuestionAsync(meeting.SessionId));
+        Assert.Null(await Engine.RevealQuestionAsync(session.SessionId));
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
-        Assert.NotNull(await Engine.RevealQuestionAsync(meeting.SessionId));
+        Assert.NotNull(await Engine.RevealQuestionAsync(session.SessionId));
     }
 
     [Fact]
     public async Task A_question_is_revealed_once()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
         _time.Advance(TimeSpan.FromSeconds(4));
-        await Engine.RevealQuestionAsync(meeting.SessionId);
+        await Engine.RevealQuestionAsync(session.SessionId);
 
-        Assert.Null(await Engine.RevealQuestionAsync(meeting.SessionId));
-        Assert.Equal(AnswerResult.TooLate, (await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1)).Result);
+        Assert.Null(await Engine.RevealQuestionAsync(session.SessionId));
+        Assert.Equal(AnswerResult.TooLate, (await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1)).Result);
     }
 
     [Fact]
     public async Task A_late_reveal_does_not_let_late_answers_in()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromSeconds(10)); // the timer is late
 
-        var submitted = await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
-        var revealed = await Engine.RevealQuestionAsync(meeting.SessionId);
+        var submitted = await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
+        var revealed = await Engine.RevealQuestionAsync(session.SessionId);
 
         Assert.Equal(AnswerResult.TooLate, submitted.Result);
         Assert.Equal((0, 1), (revealed!.Answered, revealed.TimedOut));
@@ -133,18 +133,18 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Participants_who_joined_after_a_question_started_are_not_timed_out_for_it()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 2);
         _time.Advance(TimeSpan.FromSeconds(1));
-        var late = (await Engine.JoinMasterclassAsync(meeting.JoinCode, null))!.Token;
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
+        var late = (await Engine.JoinMasterclassAsync(session.JoinCode, null))!.Token;
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromSeconds(3));
 
-        var first = await Engine.RevealQuestionAsync(meeting.SessionId);
+        var first = await Engine.RevealQuestionAsync(session.SessionId);
         _time.Advance(TimeSpan.FromSeconds(5));
-        var next = (await Engine.AdvanceSessionAsync(meeting.SessionId)).Started!;
+        var next = (await Engine.AdvanceSessionAsync(session.SessionId)).Started!;
         var lateAnswer = await Engine.SubmitAnswerAsync(late, next.QuestionId, 2);
         _time.Advance(TimeSpan.FromSeconds(4));
-        var second = await Engine.RevealQuestionAsync(meeting.SessionId);
+        var second = await Engine.RevealQuestionAsync(session.SessionId);
 
         Assert.Equal((1, 1), (first!.Answered, first.TimedOut)); // only the present non-answerer
         Assert.Equal(AnswerResult.Accepted, lateAnswer.Result); // the next Question is theirs

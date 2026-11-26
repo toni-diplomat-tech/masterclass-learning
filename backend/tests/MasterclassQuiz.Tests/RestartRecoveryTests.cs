@@ -23,7 +23,7 @@ public sealed class RestartRecoveryTests(SqlServerFixture sqlServer)
         {
             TimeLimitSeconds = new TimeLimitSeconds { Easy = 1 },
         });
-        var meeting = await RunningSessionFixture.StartAsync(engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(engine, participants: 1, easy: 2);
         await Task.Delay(TimeSpan.FromSeconds(1.6)); // past the first Question's deadline and grace
 
         using var restarted = new BackendFactory(sqlServer, HostPassword.Hash(HostClient.Password))
@@ -32,22 +32,22 @@ public sealed class RestartRecoveryTests(SqlServerFixture sqlServer)
                 .UseSetting("Quiz:RevealPauseSeconds", "0.3"));
         _ = restarted.Services; // starts the backend
 
-        var second = await WaitForAsync(engine, meeting, state => state is { Step: LiveStep.Question, Question.Number: 2 });
-        var firstRevealed = await engine.GetRevealedQuestionAsync(meeting.SessionId);
-        Assert.Equal((meeting.Question.QuestionId, 0, 1), (firstRevealed!.QuestionId, firstRevealed.Answered, firstRevealed.TimedOut));
-        Assert.Equal(meeting.Questions[1].QuestionId, second.Question!.QuestionId);
+        var second = await WaitForAsync(engine, session, state => state is { Step: LiveStep.Question, Question.Number: 2 });
+        var firstRevealed = await engine.GetRevealedQuestionAsync(session.SessionId);
+        Assert.Equal((session.Question.QuestionId, 0, 1), (firstRevealed!.QuestionId, firstRevealed.Answered, firstRevealed.TimedOut));
+        Assert.Equal(session.Questions[1].QuestionId, second.Question!.QuestionId);
 
-        var ended = await WaitForAsync(engine, meeting, state => state.Step == LiveStep.Ended);
-        Assert.Equal(meeting.SessionId, ended.Ended!.SessionId);
+        var ended = await WaitForAsync(engine, session, state => state.Step == LiveStep.Ended);
+        Assert.Equal(session.SessionId, ended.Ended!.SessionId);
     }
 
     // Polls the Masterclass's state until it matches (the backend timer moves it on in the background).
-    private static async Task<CurrentState> WaitForAsync(QuizEngine engine, RunningSessionFixture meeting, Func<CurrentState, bool> reached)
+    private static async Task<CurrentState> WaitForAsync(QuizEngine engine, RunningSessionFixture session, Func<CurrentState, bool> reached)
     {
         using var timeout = new CancellationTokenSource(Timeout);
         while (true)
         {
-            var state = (await engine.GetCurrentStateAsync(meeting.MasterclassId, meeting.Tokens[0], timeout.Token))!;
+            var state = (await engine.GetCurrentStateAsync(session.MasterclassId, session.Tokens[0], timeout.Token))!;
             if (reached(state))
             {
                 return state;

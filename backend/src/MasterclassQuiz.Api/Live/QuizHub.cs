@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace MasterclassQuiz.Api.Live;
 
 /// <summary>
-/// The live meeting's SignalR transport, at <see cref="Path"/>. The hub translates SignalR calls into calls
+/// A live Masterclass's SignalR transport, at <see cref="Path"/>. The hub translates SignalR calls into calls
 /// on the live Masterclass module (<see cref="LiveMasterclass"/>), which makes every change and sends its
 /// broadcasts; reads that change nothing go straight to the Quiz engine. The hub owns only Host
 /// authorisation, the participant cookie, adding connections to the Masterclass's group

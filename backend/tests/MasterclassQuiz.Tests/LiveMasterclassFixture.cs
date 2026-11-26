@@ -15,12 +15,29 @@ public sealed class LiveMasterclassFixture : IDisposable
 {
     public static readonly DateTimeOffset Start = new(2026, 3, 2, 9, 0, 0, TimeSpan.Zero);
 
+    /// <summary>
+    /// Short timings for running Sessions: Easy Questions have 3 seconds to answer, so Answers close
+    /// <see cref="AnswersClose"/> after the start (with grace); a revealed Question stays up <see cref="RevealPause"/>.
+    /// </summary>
+    public static readonly QuizSettings ShortTimings = new()
+    {
+        TimeLimitSeconds = new TimeLimitSeconds { Easy = 3 },
+        RevealPauseSeconds = 2,
+    };
+
+    /// <summary>When an Easy Question's Answers close under <see cref="ShortTimings"/>: 3 s plus the grace.</summary>
+    public static readonly TimeSpan AnswersClose = TimeSpan.FromMilliseconds(3_500);
+
+    /// <summary>How long a revealed Question stays up under <see cref="ShortTimings"/>.</summary>
+    public static readonly TimeSpan RevealPause = TimeSpan.FromSeconds(2);
+
     private readonly TestLifetime _lifetime = new();
 
+    /// <param name="settings">The Quiz settings; <see cref="ShortTimings"/> by default.</param>
     /// <param name="database">Another database on the test server to use instead of the shared one.</param>
     public LiveMasterclassFixture(SqlServerFixture sqlServer, QuizSettings? settings = null, DatabaseConnection? database = null)
     {
-        Engine = new QuizEngine(database ?? sqlServer.Connection, Time, settings: settings);
+        Engine = new QuizEngine(database ?? sqlServer.Connection, Time, settings: settings ?? ShortTimings);
         Live = new LiveMasterclass(Engine, Broadcasts, Time, _lifetime, NullLogger<LiveMasterclass>.Instance);
     }
 

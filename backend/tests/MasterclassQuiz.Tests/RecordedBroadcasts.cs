@@ -9,7 +9,8 @@ public sealed record Broadcast(string Message, int MasterclassId, object Payload
 
 /// <summary>
 /// The broadcast port's recording adapter: keeps every broadcast in order, so a test can await the next
-/// one (the module may send from the background) or check that nothing more is sent.
+/// one (the module may send from the background) or check that nothing more is sent. It can also be told
+/// to fail a message (<see cref="Fail"/>), as a broadcast to the group can.
 /// </summary>
 public sealed class RecordedBroadcasts : IMasterclassBroadcasts
 {
@@ -20,6 +21,19 @@ public sealed class RecordedBroadcasts : IMasterclassBroadcasts
     public static readonly TimeSpan DefaultQuietWindow = TimeSpan.FromMilliseconds(200);
 
     private readonly Channel<Broadcast> _heard = Channel.CreateUnbounded<Broadcast>();
+    private readonly HashSet<string> _failing = [];
+
+    /// <summary>From now on, sending <paramref name="message"/> throws instead of being heard.</summary>
+    public void Fail(string message)
+    {
+        lock (_failing)
+        {
+            _failing.Add(message);
+        }
+    }
+
+    /// <summary>Takes the next broadcast if one is already waiting, without waiting for one.</summary>
+    public bool TryNext(out Broadcast heard) => _heard.Reader.TryRead(out heard!);
 
     /// <summary>The next broadcast not yet taken, waiting up to <paramref name="timeout"/> for it.</summary>
     public async Task<Broadcast> NextAsync(TimeSpan? timeout = null)
@@ -81,6 +95,13 @@ public sealed class RecordedBroadcasts : IMasterclassBroadcasts
 
     private Task Record(string message, int masterclassId, object payload)
     {
+        lock (_failing)
+        {
+            if (_failing.Contains(message))
+            {
+                throw new InvalidOperationException($"Broadcasting {message} failed.");
+            }
+        }
         _heard.Writer.TryWrite(new Broadcast(message, masterclassId, payload));
         return Task.CompletedTask;
     }
