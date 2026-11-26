@@ -1,4 +1,4 @@
-import type { SessionLeaderboard } from "@/lib/leaderboard";
+import type { SessionLeaderboard } from "@/lib/live-masterclass";
 
 /**
  * This Participant's score on their phone, from the Session leaderboard: after a reveal, the points the

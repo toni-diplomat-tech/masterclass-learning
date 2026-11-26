@@ -1,8 +1,7 @@
+import type { MasterclassStatus } from "./domain";
 import { hostFetch } from "./host-session";
 
 // Server-side only: the Host's Masterclass endpoints on the backend.
-
-export type MasterclassStatus = "Draft" | "Open" | "Closed";
 
 /** Times are UTC ISO strings; joinCode is null until the Masterclass opens. */
 export type MasterclassOverview = {

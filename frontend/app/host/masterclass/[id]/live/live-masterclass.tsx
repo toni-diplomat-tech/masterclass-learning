@@ -1,28 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { HubConnection } from "@microsoft/signalr";
+import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
 import type { WorkshopOverview } from "@/lib/courses";
-import { followSession, keepFollowing, startSession, type DifficultyCounts, type LiveSession } from "@/lib/live";
-import { getCurrentState, newerLeaderboard, newerSession, resumeSession } from "@/lib/current-state";
-import { connectToQuizHub } from "@/lib/quiz-hub";
+import { useLiveProjector } from "@/lib/live-masterclass";
 import { ResumeButton } from "./resume-button";
-import { followLeaderboard, leaderboardFor, type SessionLeaderboard } from "@/lib/leaderboard";
 import { SessionLeaderboardTable } from "@/app/session-leaderboard";
 import { StartSessionDialog } from "./start-session-dialog";
 
-type MasterclassSnapshot = { participants: number } | null;
-type ParticipantCountUpdate = { masterclassId: number; participants: number };
-
 /**
- * The projector of an Open Masterclass, following it over SignalR: the Join invitation (`children`),
- * the live number of Participants and the start-Session dialog; then the running Question with its
- * countdown and answer count, its reveal, and so on until the Session ends, when the start dialog
- * comes back for the next Workshop. It asks again for the current count on every (re)connect, since
- * SignalR doesn't replay messages missed while away.
+ * The projector of an Open Masterclass, following it live: the Join invitation (`children`), the live
+ * number of Participants and the start-Session dialog; then the running Question with its countdown and
+ * answer count, its reveal, and so on until the Session ends, when the start dialog comes back for the
+ * next Workshop.
  */
 export function LiveMasterclass({
   masterclassId,
@@ -35,61 +27,16 @@ export function LiveMasterclass({
   workshops: WorkshopOverview[];
   children: ReactNode;
 }) {
-  const [count, setCount] = useState(initialParticipants);
-  const [connected, setConnected] = useState(false);
-  const [session, setSession] = useState<LiveSession>({ step: "waiting" });
-  const [leaderboard, setLeaderboard] = useState<SessionLeaderboard | null>(null);
-  const connectionRef = useRef<HubConnection | null>(null);
+  const { session, leaderboard, connected, closed, participants: count, startSession, resume } = useLiveProjector(
+    masterclassId,
+    initialParticipants,
+  );
   const router = useRouter();
 
+  // Closed (e.g. from another tab): the page renders again as the closed projector.
   useEffect(() => {
-    const connection = connectToQuizHub();
-    connectionRef.current = connection;
-    // The count only grows; an update that overtook a later one must not lower it.
-    const show = (participants: number) => setCount((shown) => Math.max(shown, participants));
-
-    connection.on("ParticipantCountUpdated", (update: ParticipantCountUpdate) => {
-      if (update.masterclassId === masterclassId) show(update.participants);
-    });
-    followSession(connection, masterclassId, setSession);
-    followLeaderboard(connection, masterclassId, setLeaderboard);
-    // Closed (e.g. from another tab): the page renders again as the closed projector.
-    connection.on("MasterclassClosed", (closed: { masterclassId: number }) => {
-      if (closed.masterclassId === masterclassId) router.refresh();
-    });
-
-    const stop = keepFollowing(
-      connection,
-      async () => {
-        const snapshot = await connection.invoke<MasterclassSnapshot>("WatchMasterclass", masterclassId);
-        if (snapshot) show(snapshot.participants);
-        // Where the Session stands now (after a reload, or broadcasts missed while reconnecting).
-        const state = await getCurrentState(connection, masterclassId);
-        if (!state) return;
-        if (state.masterclassStatus === "Closed") router.refresh();
-        setLeaderboard((shown) => newerLeaderboard(shown, state.leaderboard));
-        setSession((shown) => newerSession(shown, state));
-      },
-      setConnected,
-    );
-    return () => {
-      connectionRef.current = null;
-      stop();
-    };
-  }, [masterclassId, router]);
-
-  const start = async (workshopId: number, mix: DifficultyCounts) => {
-    const connection = connectionRef.current;
-    if (!connection || !connected) return ["Not connected to live updates yet. Try again in a moment."];
-    return startSession(connection, masterclassId, workshopId, mix);
-  };
-
-  const resume = async () => {
-    const connection = connectionRef.current;
-    if (!connection) throw new Error("Not connected");
-    const state = await resumeSession(connection, masterclassId);
-    if (state) setSession((shown) => newerSession(shown, state));
-  };
+    if (closed) router.refresh();
+  }, [closed, router]);
 
   const running = session.step === "question" || session.step === "revealed";
   const participantCount = (
@@ -124,7 +71,7 @@ export function LiveMasterclass({
     return (
       <>
         <RevealedQuestion revealed={session.revealed} large />
-        <SessionLeaderboardTable leaderboard={leaderboardFor(leaderboard, session.revealed.sessionId)} />
+        <SessionLeaderboardTable leaderboard={leaderboard} />
         {participantCount}
         <ResumeButton onResume={resume} />
       </>
@@ -138,12 +85,10 @@ export function LiveMasterclass({
           Session over
         </h2>
       )}
-      {session.step === "ended" && (
-        <SessionLeaderboardTable leaderboard={leaderboardFor(leaderboard, session.ended.sessionId)} />
-      )}
+      {session.step === "ended" && <SessionLeaderboardTable leaderboard={leaderboard} />}
       {children}
       {participantCount}
-      <StartSessionDialog workshops={workshops} onStart={start} />
+      <StartSessionDialog workshops={workshops} onStart={startSession} />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { QuestionRevealed } from "@/lib/live";
+import type { QuestionRevealed } from "@/lib/live-masterclass";
 
 /**
  * A revealed Question on the projector (`large`) or a phone: the correct option marked, how many chose

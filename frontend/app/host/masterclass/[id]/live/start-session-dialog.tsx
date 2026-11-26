@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { WorkshopOverview } from "@/lib/courses";
-import type { DifficultyCounts } from "@/lib/live";
+import type { DifficultyCounts } from "@/lib/domain";
 
 const DIFFICULTIES = [
   { key: "easy", label: "Easy" },
