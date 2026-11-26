@@ -147,6 +147,19 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task Only_the_next_workshop_can_start_its_session()
+    {
+        var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
+
+        var skipped = await _engine.StartSessionAsync(meeting.MasterclassId, await _engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var next = await _engine.StartSessionAsync(meeting.MasterclassId, meeting.WorkshopId, new DifficultyCounts(1, 0, 0));
+
+        Assert.Null(skipped.Session);
+        Assert.Equal(["Only the Next Workshop, 'Unit tests', can start its Session."], skipped.Problems);
+        Assert.Empty(next.Problems); // the refused start left nothing behind
+    }
+
+    [Fact]
     public async Task A_session_starts_only_in_an_open_masterclass()
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);

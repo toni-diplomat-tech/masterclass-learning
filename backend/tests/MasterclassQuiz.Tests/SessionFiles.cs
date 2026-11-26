@@ -31,6 +31,17 @@ public static class SessionFiles
         return file;
     }
 
+    /// <summary>
+    /// Renumbers the Workshop to come after every other one in Course order. Re-importing the file after its
+    /// Session ran makes Course order differ from the order the Sessions ran in.
+    /// </summary>
+    public static void MoveWorkshopLast(this JsonObject file, string workshopSlug)
+    {
+        var workshops = file["workshops"]!.AsArray();
+        var last = workshops.Max(w => (int)w!["number"]!);
+        workshops.Single(w => (string?)w!["slug"] == workshopSlug)!["number"] = last + 1;
+    }
+
     public static JsonObject Question(string id, string difficulty) => new()
     {
         ["id"] = id,

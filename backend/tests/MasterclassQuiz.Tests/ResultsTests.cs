@@ -50,19 +50,22 @@ public sealed class ResultsTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Sessions_are_in_course_order_and_a_running_question_appears_once_revealed()
     {
-        var meeting = await OpenMeetingAsync(SessionFiles.WithWorkshopQuestions(2, 0, 0));
+        var file = SessionFiles.WithWorkshopQuestions(2, 0, 0);
+        var meeting = await OpenMeetingAsync(file);
         var participant = await meeting.JoinAsync();
-        var doubles = await meeting.StartSessionAsync("test-doubles");
-        await meeting.FinishSessionAsync(doubles, new() { [participant] = _ => 1 });
         var unitTests = await meeting.StartSessionAsync("unit-tests");
-        await Engine.SubmitAnswerAsync(participant, unitTests.FirstQuestion.QuestionId, 1);
+        await meeting.FinishSessionAsync(unitTests, new() { [participant] = _ => 1 });
+        file.MoveWorkshopLast("unit-tests");
+        Assert.Empty((await Engine.ImportCourseAsync(file.ToJsonString())).Problems);
+        var doubles = await meeting.StartSessionAsync("test-doubles");
+        await Engine.SubmitAnswerAsync(participant, doubles.FirstQuestion.QuestionId, 1);
 
         var beforeReveal = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
-        await meeting.AnswerAndRevealAsync(unitTests.Id, unitTests.Questions[0], []);
+        await meeting.AnswerAndRevealAsync(doubles.Id, doubles.Questions[0], []);
         var afterReveal = await Engine.GetMasterclassResultsAsync(meeting.MasterclassId);
 
         Assert.Equal(
-            [("Unit tests", false, 0), ("Test doubles", true, doubles.Questions.Count)],
+            [("Test doubles", false, 0), ("Unit tests", true, unitTests.Questions.Count)],
             beforeReveal!.Sessions.Select(s => (s.WorkshopTitle, s.Ended, s.Questions.Count)));
         var revealed = Assert.Single(afterReveal!.Sessions[0].Questions);
         Assert.Equal((1, 1, 0, 0, 100), (revealed.Number, revealed.Correct, revealed.Incorrect, revealed.TimedOut, revealed.PercentCorrect));
