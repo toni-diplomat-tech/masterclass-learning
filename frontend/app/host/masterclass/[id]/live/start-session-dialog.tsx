@@ -6,6 +6,7 @@ import { Card } from "@/components/card";
 import { Notice } from "@/components/notice";
 import type { WorkshopOverview } from "@/lib/courses";
 import type { DifficultyCounts } from "@/lib/domain";
+import { workshopProgress, type WorkshopStep } from "@/lib/workshop-progress";
 import styles from "./projector.module.scss";
 
 const DIFFICULTIES = [
@@ -14,32 +15,63 @@ const DIFFICULTIES = [
   { key: "hard", label: "Hard" },
 ] as const;
 
+const STEP_LABELS: Record<WorkshopStep, string> = { done: "Done", next: "Next", locked: "Locked" };
+
 function suggestedMix(workshop: WorkshopOverview | undefined): DifficultyCounts {
   const counts = workshop?.questions ?? { easy: 0, medium: 0, hard: 0 };
   return { easy: Math.min(2, counts.easy), medium: Math.min(2, counts.medium), hard: Math.min(1, counts.hard) };
 }
 
 /**
- * The start-Session dialog: pick a Workshop, see how many Questions of each Difficulty it has, and set
- * the Difficulty mix. A mix larger than the Workshop's total can't be submitted (the server checks too);
- * a short Difficulty is filled from the others when the Session starts. A frosted sheet on the projector.
+ * The start-Session dialog: where the Masterclass has got to in its Course (earlier Workshops done, the
+ * Next Workshop next, later ones locked), and the Difficulty mix for the Next Workshop's Session, the only
+ * one that can start, beside how many Questions of each Difficulty it has. A mix larger than the
+ * Workshop's total can't be submitted (the server checks too); a short Difficulty is filled from the
+ * others when the Session starts. A frosted sheet on the projector. Key it by the Next Workshop so the mix
+ * starts afresh when the Next Workshop moves on.
  */
 export function StartSessionDialog({
   workshops,
+  nextWorkshopId,
   onStart,
 }: {
   workshops: WorkshopOverview[];
+  nextWorkshopId: number | null;
   onStart: (workshopId: number, mix: DifficultyCounts) => Promise<string[]>;
 }) {
-  const [workshopId, setWorkshopId] = useState(workshops[0]?.id);
-  const workshop = workshops.find((w) => w.id === workshopId);
-  const [mix, setMix] = useState(() => suggestedMix(workshops[0]));
+  const progress = workshopProgress(workshops, nextWorkshopId);
+  const workshop = progress.find((p) => p.step === "next")?.workshop;
+  const [mix, setMix] = useState(() => suggestedMix(workshop));
   const [problems, setProblems] = useState<string[]>([]);
   const [starting, setStarting] = useState(false);
 
   if (workshops.length === 0) return <p className={styles.muted}>This Course has no Workshops to run a Session for.</p>;
 
-  const available = workshop ? workshop.questions.easy + workshop.questions.medium + workshop.questions.hard : 0;
+  const courseProgress = (
+    <ol data-testid="workshop-progress" className={styles.workshops}>
+      {progress.map(({ workshop: w, step }) => (
+        <li key={w.id} data-step={step} className={styles[step]}>
+          <span>
+            {w.number}. {w.title}
+          </span>
+          <span className={styles.step}>{STEP_LABELS[step]}</span>
+        </li>
+      ))}
+    </ol>
+  );
+
+  if (!workshop) {
+    return (
+      <Card glass className={styles.dialog}>
+        <div className={styles.dialogForm}>
+          <h2>Every Workshop has had its Session</h2>
+          {courseProgress}
+        </div>
+      </Card>
+    );
+  }
+
+  const available = workshop.questions.easy + workshop.questions.medium + workshop.questions.hard;
   const total = mix.easy + mix.medium + mix.hard;
   const blocked =
     total > available
@@ -48,18 +80,12 @@ export function StartSessionDialog({
         ? "Ask for at least one Question."
         : null;
 
-  const chooseWorkshop = (id: number) => {
-    setWorkshopId(id);
-    setMix(suggestedMix(workshops.find((w) => w.id === id)));
-    setProblems([]);
-  };
-
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (blocked || workshopId === undefined) return;
+    if (blocked) return;
     setStarting(true);
     try {
-      setProblems(await onStart(workshopId, mix));
+      setProblems(await onStart(workshop.id, mix));
     } catch {
       setProblems(["The Session could not be started. Try again."]);
     } finally {
@@ -70,17 +96,10 @@ export function StartSessionDialog({
   return (
     <Card glass className={styles.dialog}>
       <form onSubmit={submit} data-testid="start-session" className={styles.dialogForm}>
-        <h2>Start a Session</h2>
-        <label className={styles.field}>
-          Workshop
-          <select value={workshopId} onChange={(event) => chooseWorkshop(Number(event.target.value))}>
-            {workshops.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.number}. {w.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        <h2>
+          Start the Session for {workshop.number}. {workshop.title}
+        </h2>
+        {courseProgress}
         <table>
           <thead>
             <tr>
@@ -98,7 +117,7 @@ export function StartSessionDialog({
               <tr key={key}>
                 <th scope="row">{label}</th>
                 <td data-testid={`available-${key}`} className={styles.num}>
-                  {workshop?.questions[key] ?? 0}
+                  {workshop.questions[key]}
                 </td>
                 <td className={styles.num}>
                   <input

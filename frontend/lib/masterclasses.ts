@@ -3,7 +3,10 @@ import { hostFetch } from "./host-session";
 
 // Server-side only: the Host's Masterclass endpoints on the backend.
 
-/** Times are UTC ISO strings; joinCode is null until the Masterclass opens. */
+/**
+ * Times are UTC ISO strings; joinCode is null until the Masterclass opens. nextWorkshopId is the Next
+ * Workshop, the only one whose Session can start; null once every Workshop has had its Session.
+ */
 export type MasterclassOverview = {
   id: number;
   name: string;
@@ -15,6 +18,7 @@ export type MasterclassOverview = {
   createdAt: string;
   openedAt: string | null;
   closedAt: string | null;
+  nextWorkshopId: number | null;
 };
 
 export type CreateResult = { masterclass: MasterclassOverview } | { problems: string[] };

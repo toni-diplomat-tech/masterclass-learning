@@ -146,19 +146,42 @@
   gap: $space-4;
 }
 
-.field {
+// The Course's Workshops in the start-Session dialog: done and locked ones muted, the Next Workshop raised
+// on a red edge.
+.workshops {
   display: flex;
   flex-direction: column;
   gap: $space-1;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
-  color: var(--color-text-muted);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-  select {
-    width: 100%;
-    color: var(--color-text);
-    font-size: $font-size-base;
-  }
+.done,
+.next,
+.locked {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: $space-2 $space-3;
+  border-left: 3px solid transparent;
+  border-radius: $radius-sm;
+}
+
+.done,
+.locked {
+  color: var(--color-text-muted);
+}
+
+.next {
+  background: var(--color-surface-2);
+  border-left-color: var(--color-primary);
+  font-weight: $font-weight-bold;
+}
+
+.step {
+  font-size: $font-size-sm;
+  text-transform: uppercase;
 }
 
 .mixInput {

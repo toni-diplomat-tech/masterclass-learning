@@ -15,18 +15,21 @@ import { StartSessionDialog } from "./start-session-dialog";
  * The projector of an Open Masterclass, following it live: the Join invitation (`children`), the live
  * number of Participants and the start-Session dialog; then the running Question with its countdown and
  * answer count, its reveal, and so on until the Session ends, when the start dialog comes back for the
- * next Workshop. `closeControl` (Close Masterclass) sits at the bottom between Sessions.
+ * Next Workshop (`nextWorkshopId`, from the page). `closeControl` (Close Masterclass) sits at the bottom
+ * between Sessions.
  */
 export function LiveMasterclass({
   masterclassId,
   initialParticipants,
   workshops,
+  nextWorkshopId,
   closeControl,
   children,
 }: {
   masterclassId: number;
   initialParticipants: number;
   workshops: WorkshopOverview[];
+  nextWorkshopId: number | null;
   closeControl: ReactNode;
   children: ReactNode;
 }) {
@@ -40,6 +43,12 @@ export function LiveMasterclass({
   useEffect(() => {
     if (closed) router.refresh();
   }, [closed, router]);
+
+  // A Session has started (here or in another tab): the page renders again with the Next Workshop moved on.
+  const sessionId = session.step === "question" ? session.question.sessionId : null;
+  useEffect(() => {
+    if (sessionId !== null) router.refresh();
+  }, [sessionId, router]);
 
   const running = session.step === "question" || session.step === "revealed";
   const participantCount = (
@@ -100,7 +109,7 @@ export function LiveMasterclass({
       {session.step === "ended" && <SessionLeaderboardTable leaderboard={leaderboard} />}
       {children}
       {participantCount}
-      <StartSessionDialog workshops={workshops} onStart={startSession} />
+      <StartSessionDialog key={nextWorkshopId} workshops={workshops} nextWorkshopId={nextWorkshopId} onStart={startSession} />
       {closeControl}
     </>
   );
