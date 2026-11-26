@@ -1,7 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/button";
+import { Notice } from "@/components/notice";
 import { createMasterclassAction, type CreateMasterclassState } from "./actions";
+import styles from "./host.module.scss";
 
 const initialState: CreateMasterclassState = {};
 
@@ -9,33 +12,39 @@ export function CreateMasterclassForm({ courses }: { courses: { id: number; titl
   const [state, formAction, pending] = useActionState(createMasterclassAction, initialState);
 
   return (
-    <form action={formAction}>
-      <p>
-        <label htmlFor="masterclass-name">Name</label>{" "}
-        <input id="masterclass-name" name="name" required maxLength={200} placeholder="Dev team 2026" />{" "}
-        <label htmlFor="masterclass-course">Course</label>{" "}
-        <select id="masterclass-course" name="courseId" required>
-          {courses.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.title}
-            </option>
-          ))}
-        </select>{" "}
-        <button type="submit" disabled={pending}>
+    <form action={formAction} className={styles.inlineForm}>
+      <div className={styles.fields}>
+        <label htmlFor="masterclass-name" className={styles.field}>
+          Name
+          <input id="masterclass-name" name="name" required maxLength={200} placeholder="Dev team 2026" />
+        </label>
+        <label htmlFor="masterclass-course" className={styles.field}>
+          Course
+          <select id="masterclass-course" name="courseId" required>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" loading={pending}>
           {pending ? "Creating…" : "Create Masterclass"}
-        </button>
-      </p>
+        </Button>
+      </div>
       {state.problems && (
-        <ul role="alert" data-testid="create-masterclass-problems">
-          {state.problems.map((problem, index) => (
-            <li key={index}>{problem}</li>
-          ))}
-        </ul>
+        <Notice tone="error" role="alert" data-testid="create-masterclass-problems">
+          <ul>
+            {state.problems.map((problem, index) => (
+              <li key={index}>{problem}</li>
+            ))}
+          </ul>
+        </Notice>
       )}
       {state.error && (
-        <p role="alert" data-testid="create-masterclass-error">
+        <Notice tone="error" role="alert" data-testid="create-masterclass-error">
           {state.error}
-        </p>
+        </Notice>
       )}
     </form>
   );

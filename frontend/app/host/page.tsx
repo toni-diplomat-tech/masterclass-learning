@@ -1,20 +1,26 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Button } from "@/components/button";
+import { Card } from "@/components/card";
+import { Page, Stack } from "@/components/page";
 import { listCourses, type CourseOverview } from "@/lib/courses";
 import { requireHost } from "@/lib/host-session";
 import { listMasterclasses, type MasterclassOverview } from "@/lib/masterclasses";
 import { logout } from "./actions";
 import { CreateMasterclassForm } from "./create-masterclass-form";
+import styles from "./host.module.scss";
 import { ImportForm } from "./import-form";
 
 export default function HostPage() {
   return (
-    <main style={{ padding: "2rem" }}>
-      <h1>Back office</h1>
-      <Suspense fallback={<p>Checking your session…</p>}>
-        <BackOffice />
-      </Suspense>
-    </main>
+    <Page width="wide">
+      <Stack gap="lg">
+        <h1>Back office</h1>
+        <Suspense fallback={<p className={styles.muted}>Checking your session…</p>}>
+          <BackOffice />
+        </Suspense>
+      </Stack>
+    </Page>
   );
 }
 
@@ -23,22 +29,32 @@ async function BackOffice() {
   const [courses, masterclasses] = await Promise.all([listCourses(), listMasterclasses()]);
   return (
     <>
-      <section>
-        <h2>Masterclasses</h2>
-        {courses.length === 0 ? (
-          <p>Import a Course first, then create a Masterclass for it.</p>
-        ) : (
-          <CreateMasterclassForm courses={courses.map(({ id, title }) => ({ id, title }))} />
-        )}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Masterclasses</h2>
+        <Card>
+          {courses.length === 0 ? (
+            <p className={styles.muted}>Import a Course first, then create a Masterclass for it.</p>
+          ) : (
+            <CreateMasterclassForm courses={courses.map(({ id, title }) => ({ id, title }))} />
+          )}
+        </Card>
         {masterclasses.length > 0 && <Masterclasses masterclasses={masterclasses} />}
       </section>
-      <section>
-        <h2>Courses</h2>
-        <ImportForm />
-        {courses.length === 0 ? <p>No Courses yet. Import one above.</p> : courses.map((course) => <Course key={course.id} course={course} />)}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Courses</h2>
+        <Card>
+          <ImportForm />
+        </Card>
+        {courses.length === 0 ? (
+          <p className={styles.muted}>No Courses yet. Import one above.</p>
+        ) : (
+          courses.map((course) => <Course key={course.id} course={course} />)
+        )}
       </section>
       <form action={logout}>
-        <button type="submit">Log out</button>
+        <Button type="submit" variant="secondary">
+          Log out
+        </Button>
       </form>
     </>
   );
@@ -46,67 +62,80 @@ async function BackOffice() {
 
 function Course({ course }: { course: CourseOverview }) {
   return (
-    <article data-testid="course">
+    <Card as="article" data-testid="course" className={styles.section}>
       <h3>{course.title}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Workshop</th>
-            <th scope="col">Easy</th>
-            <th scope="col">Medium</th>
-            <th scope="col">Hard</th>
-          </tr>
-        </thead>
-        <tbody>
-          {course.workshops.map((workshop) => (
-            <tr key={workshop.id}>
-              <th scope="row">
-                {String(workshop.number).padStart(2, "0")} {workshop.title}
+      <div className={styles.tableWrap}>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Workshop</th>
+              <th scope="col" className={styles.num}>
+                Easy
               </th>
-              <td>{workshop.questions.easy}</td>
-              <td>{workshop.questions.medium}</td>
-              <td>{workshop.questions.hard}</td>
+              <th scope="col" className={styles.num}>
+                Medium
+              </th>
+              <th scope="col" className={styles.num}>
+                Hard
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </article>
+          </thead>
+          <tbody>
+            {course.workshops.map((workshop) => (
+              <tr key={workshop.id}>
+                <th scope="row">
+                  {String(workshop.number).padStart(2, "0")} {workshop.title}
+                </th>
+                <td className={styles.num}>{workshop.questions.easy}</td>
+                <td className={styles.num}>{workshop.questions.medium}</td>
+                <td className={styles.num}>{workshop.questions.hard}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
 function Masterclasses({ masterclasses }: { masterclasses: MasterclassOverview[] }) {
   return (
-    <table data-testid="masterclasses">
-      <thead>
-        <tr>
-          <th scope="col">Masterclass</th>
-          <th scope="col">Course</th>
-          <th scope="col">Status</th>
-          <th scope="col">Join code</th>
-          <th scope="col">Participants</th>
-          <th scope="col">Links</th>
-        </tr>
-      </thead>
-      <tbody>
-        {masterclasses.map((masterclass) => (
-          <tr key={masterclass.id}>
-            <th scope="row">{masterclass.name}</th>
-            <td>{masterclass.courseTitle}</td>
-            <td>{masterclass.status}</td>
-            <td>{masterclass.joinCode ?? "–"}</td>
-            <td>{masterclass.participants}</td>
-            <td>
-              <Link href={`/host/masterclass/${masterclass.id}/live`}>Projector view</Link>
-              {masterclass.status !== "Draft" && (
-                <>
-                  {" · "}
-                  <Link href={`/host/masterclass/${masterclass.id}/results`}>Results</Link>
-                </>
-              )}
-            </td>
+    <Card padded={false} className={styles.tableWrap}>
+      <table data-testid="masterclasses">
+        <thead>
+          <tr>
+            <th scope="col">Masterclass</th>
+            <th scope="col">Course</th>
+            <th scope="col">Status</th>
+            <th scope="col">Join code</th>
+            <th scope="col" className={styles.num}>
+              Participants
+            </th>
+            <th scope="col">Links</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {masterclasses.map((masterclass) => (
+            <tr key={masterclass.id}>
+              <th scope="row">{masterclass.name}</th>
+              <td>{masterclass.courseTitle}</td>
+              <td>
+                <span className={[styles.status, masterclass.status === "Open" && styles.statusOpen].filter(Boolean).join(" ")}>
+                  {masterclass.status}
+                </span>
+              </td>
+              <td className={styles.code}>{masterclass.joinCode ?? "–"}</td>
+              <td className={styles.num}>{masterclass.participants}</td>
+              <td>
+                <span className={styles.links}>
+                  <Link href={`/host/masterclass/${masterclass.id}/live`}>Projector view</Link>
+                  {masterclass.status !== "Draft" && <Link href={`/host/masterclass/${masterclass.id}/results`}>Results</Link>}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
   );
 }

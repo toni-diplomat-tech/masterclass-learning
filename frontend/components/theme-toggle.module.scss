@@ -1,0 +1,58 @@
+@use "design" as *;
+
+.toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: $radius-pill;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 $space-2;
+  border: 0;
+  border-radius: $radius-pill;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+
+  @include focus-ring;
+
+  &:hover {
+    color: var(--color-text);
+  }
+
+  &[aria-checked="true"] {
+    background: var(--color-surface-1);
+    color: var(--color-text);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  }
+
+  @include motion {
+    transition:
+      background $duration-fast $easing,
+      color $duration-fast $easing;
+  }
+}
+
+// Labels only where there is room; the icons carry a title and an accessible name on phones.
+.label {
+  @include visually-hidden;
+
+  @include up(md) {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+}

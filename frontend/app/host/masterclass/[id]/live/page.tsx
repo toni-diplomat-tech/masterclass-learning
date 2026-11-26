@@ -5,22 +5,25 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Suspense } from "react";
 import { openMasterclassAction } from "@/app/host/actions";
+import { Button } from "@/components/button";
+import { Eyebrow, Page } from "@/components/page";
 import { listCourses } from "@/lib/courses";
 import { requireHost } from "@/lib/host-session";
 import { getMasterclass, getMasterclassLeaderboard, type MasterclassOverview } from "@/lib/masterclasses";
 import { CloseMasterclassForm } from "./close-masterclass-form";
 import { LiveMasterclass } from "./live-masterclass";
 import { MasterclassLeaderboardTable } from "./masterclass-leaderboard";
+import styles from "./projector.module.scss";
 
 export const metadata: Metadata = { title: "Projector · Masterclass Quiz" };
 
 export default function ProjectorPage({ params }: PageProps<"/host/masterclass/[id]/live">) {
   return (
-    <main style={{ padding: "2rem", textAlign: "center" }}>
-      <Suspense fallback={<p>Loading…</p>}>
+    <Page width="projector" center>
+      <Suspense fallback={<p className={styles.muted}>Loading…</p>}>
         <Projector params={params} />
       </Suspense>
-    </main>
+    </Page>
   );
 }
 
@@ -33,22 +36,23 @@ async function Projector({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <p style={{ textAlign: "left" }}>
-        <Link href="/host">← Back office</Link>
-        {masterclass.status !== "Draft" && (
-          <>
-            {" · "}
+      <div className={styles.top}>
+        <nav className={styles.nav}>
+          <Link href="/host">← Back office</Link>
+          {masterclass.status !== "Draft" && (
             <Link href={`/host/masterclass/${masterclass.id}/results`} data-testid="results-link">
               Results
             </Link>
-          </>
-        )}
-      </p>
-      <h1>{masterclass.name}</h1>
-      <p>{masterclass.courseTitle}</p>
-      {masterclass.status === "Draft" && <OpenMasterclass masterclass={masterclass} />}
-      {masterclass.status === "Open" && <OpenProjector masterclass={masterclass} />}
-      {masterclass.status === "Closed" && <ClosedProjector masterclass={masterclass} />}
+          )}
+        </nav>
+        <Eyebrow>{masterclass.courseTitle}</Eyebrow>
+      </div>
+      <div className={styles.screen}>
+        <h1 className={styles.title}>{masterclass.name}</h1>
+        {masterclass.status === "Draft" && <OpenMasterclass masterclass={masterclass} />}
+        {masterclass.status === "Open" && <OpenProjector masterclass={masterclass} />}
+        {masterclass.status === "Closed" && <ClosedProjector masterclass={masterclass} />}
+      </div>
     </>
   );
 }
@@ -58,7 +62,7 @@ async function ClosedProjector({ masterclass }: { masterclass: MasterclassOvervi
   const leaderboard = await getMasterclassLeaderboard(masterclass.id);
   return (
     <>
-      <p>This Masterclass is closed.</p>
+      <p className={styles.muted}>This Masterclass is closed.</p>
       {leaderboard && <MasterclassLeaderboardTable leaderboard={leaderboard} />}
     </>
   );
@@ -66,11 +70,11 @@ async function ClosedProjector({ masterclass }: { masterclass: MasterclassOvervi
 
 function OpenMasterclass({ masterclass }: { masterclass: MasterclassOverview }) {
   return (
-    <form action={openMasterclassAction.bind(null, masterclass.id)}>
-      <p>Open the Masterclass when the meeting starts. Participants can then join with its Join code.</p>
-      <button type="submit" style={{ fontSize: "1.5rem" }}>
+    <form action={openMasterclassAction.bind(null, masterclass.id)} className={styles.openForm}>
+      <p className={styles.muted}>Open the Masterclass when the meeting starts. Participants can then join with its Join code.</p>
+      <Button type="submit" size="lg">
         Open Masterclass
-      </button>
+      </Button>
     </form>
   );
 }
@@ -79,9 +83,13 @@ function OpenMasterclass({ masterclass }: { masterclass: MasterclassOverview }) 
 async function OpenProjector({ masterclass }: { masterclass: MasterclassOverview }) {
   const course = (await listCourses()).find((c) => c.id === masterclass.courseId);
   return (
-    <LiveMasterclass masterclassId={masterclass.id} initialParticipants={masterclass.participants} workshops={course?.workshops ?? []}>
+    <LiveMasterclass
+      masterclassId={masterclass.id}
+      initialParticipants={masterclass.participants}
+      workshops={course?.workshops ?? []}
+      closeControl={<CloseMasterclassForm masterclassId={masterclass.id} />}
+    >
       <JoinInvitation masterclass={masterclass} />
-      <CloseMasterclassForm masterclassId={masterclass.id} />
     </LiveMasterclass>
   );
 }
@@ -91,18 +99,20 @@ async function JoinInvitation({ masterclass }: { masterclass: MasterclassOvervie
   const qrSvg = await QRCode.toString(joinUrl, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
 
   return (
-    <section>
-      <p style={{ fontSize: "1.5rem" }}>
-        Join at <strong>{joinUrl.replace(/^https?:\/\//, "").replace(/\/\?.*$/, "")}</strong> with the code
-      </p>
-      <p data-testid="join-code" style={{ fontSize: "6rem", fontWeight: "bold", letterSpacing: "0.2em", margin: "1rem 0" }}>
-        {masterclass.joinCode}
-      </p>
+    <section className={styles.invite}>
+      <div>
+        <p className={styles.joinAt}>
+          Join at <strong className={styles.joinHost}>{joinUrl.replace(/^https?:\/\//, "").replace(/\/\?.*$/, "")}</strong> with the code
+        </p>
+        <p data-testid="join-code" className={styles.joinCode}>
+          {masterclass.joinCode}
+        </p>
+      </div>
       <div
         data-testid="join-qr-code"
         role="img"
         aria-label={`QR code to join: ${joinUrl}`}
-        style={{ width: "min(40vh, 80vw)", margin: "0 auto", background: "#fff" }}
+        className={styles.qr}
         dangerouslySetInnerHTML={{ __html: qrSvg }}
       />
     </section>

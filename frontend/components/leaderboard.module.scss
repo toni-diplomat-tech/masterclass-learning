@@ -1,0 +1,85 @@
+@use "design" as *;
+
+.board {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: $space-2;
+  text-align: left;
+}
+
+.large {
+  font-size: $projector-size-body;
+  gap: $space-3;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+
+  // Rows rise in one after another when the board appears.
+  @include motion {
+    animation: rise $duration-slow $easing both;
+    animation-delay: calc(var(--index, 0) * 40ms);
+  }
+}
+
+.rank {
+  flex: none;
+  min-width: 3ch;
+  color: var(--color-text-muted);
+  font-weight: $font-weight-bold;
+  text-align: right;
+
+  @include mono;
+}
+
+.nickname {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: $font-weight-medium;
+}
+
+.points {
+  flex: none;
+  font-weight: $font-weight-bold;
+
+  @include mono;
+}
+
+.rank1 {
+  border-color: var(--color-primary);
+
+  .rank {
+    color: var(--color-primary-text);
+  }
+
+  .nickname {
+    font-weight: $font-weight-black;
+  }
+}
+
+.rank2,
+.rank3 {
+  background: var(--color-surface-2);
+}
+
+.me {
+  outline: 2px solid var(--color-correct);
+  outline-offset: -1px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

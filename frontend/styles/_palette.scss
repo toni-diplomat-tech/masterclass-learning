@@ -1,0 +1,55 @@
+// The two themes as semantic colour tokens. globals.scss emits each map as CSS custom properties
+// (`--color-<name>`): light on :root, dark under the System media query and [data-theme="dark"].
+// Every text/background pair is checked for WCAG AA in styles/palette.test.ts; keep the names in step.
+//
+// Mr. Robot: near-black / off-white base, harsh red accent, terminal green for Correct. Incorrect and
+// Timed out use a muted grey so they never clash with the red.
+
+$themes: (
+  dark: (
+    bg: #0b0b0d,
+    surface-1: #151518,
+    surface-2: #1f1f23,
+    surface-3: #2a2a2f,
+    text: #f2f1ec,
+    text-muted: #a3a3a8,
+    border: #34343a,
+    border-strong: #6b6b73,
+    primary: #e0161e,
+    on-primary: #ffffff,
+    primary-text: #ff5c61,
+    correct: #33e070,
+    on-correct: #04140a,
+    correct-text: #4ee887,
+    wrong: #4a4a52,
+    on-wrong: #f2f1ec,
+    wrong-text: #9a9aa2,
+    focus: #ff5c61,
+    glass: rgb(21 21 24 / 72%),
+    scrim: rgb(0 0 0 / 60%),
+    qr-bg: #ffffff,
+  ),
+  light: (
+    bg: #f3f2ee,
+    surface-1: #ffffff,
+    surface-2: #e9e8e3,
+    surface-3: #dddcd6,
+    text: #121214,
+    text-muted: #5a5a61,
+    border: #cfcec8,
+    border-strong: #85848c,
+    primary: #c8101a,
+    on-primary: #ffffff,
+    primary-text: #b00e17,
+    correct: #0e7a3c,
+    on-correct: #ffffff,
+    correct-text: #0b6a33,
+    wrong: #6c6c74,
+    on-wrong: #ffffff,
+    wrong-text: #5a5a61,
+    focus: #c8101a,
+    glass: rgb(255 255 255 / 72%),
+    scrim: rgb(18 18 20 / 40%),
+    qr-bg: #ffffff,
+  ),
+);

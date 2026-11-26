@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
+import { OptionTile, OptionTiles } from "@/components/option-tile";
+import { Chips } from "@/components/page";
 import type { QuestionRevealed } from "@/lib/live-masterclass";
+import styles from "./quiz.module.scss";
 
 /**
  * A revealed Question on the projector (`large`) or a phone: the correct option marked, how many chose
@@ -15,34 +18,31 @@ export function RevealedQuestion({
   children?: ReactNode;
 }) {
   return (
-    <section data-testid="revealed" style={{ maxWidth: "60rem", margin: "0 auto" }}>
-      <p>
-        {revealed.workshopTitle} · Question {revealed.number} of {revealed.questionCount} · {revealed.difficulty}
-      </p>
+    <section data-testid="revealed" className={[styles.question, large && styles.large].filter(Boolean).join(" ")}>
+      <Chips items={[revealed.workshopTitle, `Question ${revealed.number} of ${revealed.questionCount}`, revealed.difficulty]} />
       {children}
-      <h2 style={{ fontSize: large ? "2.5rem" : "1.5rem" }}>{revealed.text}</h2>
-      <ol style={{ listStyle: "upper-alpha", textAlign: "left", fontSize: large ? "2rem" : "1.25rem", padding: "0 0 0 2em" }}>
+      <h2 className={styles.questionText}>{revealed.text}</h2>
+      <OptionTiles large={large}>
         {revealed.options.map((option) => {
           const correct = option.position === revealed.correctOption;
           return (
-            <li
+            <OptionTile
               key={option.position}
-              data-testid="revealed-option"
-              data-correct={correct}
-              style={{ margin: "0.5rem 0", fontWeight: correct ? "bold" : "normal", opacity: correct ? 1 : 0.6 }}
+              testId="revealed-option"
+              correct={correct}
+              position={option.position}
+              state={correct ? "correct" : "wrong"}
+              count={option.answers}
             >
-              {option.text} {correct && "✓"}
-              <span data-testid="option-answers" style={{ float: "right" }}>
-                {option.answers}
-              </span>
-            </li>
+              {option.text}
+            </OptionTile>
           );
         })}
-      </ol>
-      <p>
+      </OptionTiles>
+      <p className={styles.muted}>
         {revealed.answered} answered · {revealed.timedOut} timed out
       </p>
-      <p>{revealed.lastQuestion ? "That was the last Question." : "The next Question starts in a moment…"}</p>
+      <p className={styles.muted}>{revealed.lastQuestion ? "That was the last Question." : "The next Question starts in a moment…"}</p>
     </section>
   );
 }

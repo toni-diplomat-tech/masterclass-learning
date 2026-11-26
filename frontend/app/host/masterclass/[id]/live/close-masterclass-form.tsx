@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 import { closeMasterclassAction, type CloseMasterclassState } from "@/app/host/actions";
+import { Button } from "@/components/button";
+import { Notice } from "@/components/notice";
+import styles from "./projector.module.scss";
 
 const initialState: CloseMasterclassState = {};
 
@@ -15,19 +18,25 @@ export function CloseMasterclassForm({ masterclassId }: { masterclassId: number 
       onSubmit={(event) => {
         if (!window.confirm("Close the Masterclass? Nobody can join or play a Session after this.")) event.preventDefault();
       }}
-      style={{ marginTop: "2rem" }}
+      className={styles.closeForm}
     >
-      <button type="submit" disabled={pending} data-testid="close-masterclass">
+      <Button type="submit" variant="danger" loading={pending} data-testid="close-masterclass">
         {pending ? "Closing…" : "Close Masterclass"}
-      </button>
+      </Button>
       {state.problems && (
-        <ul role="alert" data-testid="close-masterclass-problems" style={{ listStyle: "none", padding: 0 }}>
-          {state.problems.map((problem, index) => (
-            <li key={index}>{problem}</li>
-          ))}
-        </ul>
+        <Notice tone="error" role="alert" data-testid="close-masterclass-problems">
+          <ul className={styles.problems}>
+            {state.problems.map((problem, index) => (
+              <li key={index}>{problem}</li>
+            ))}
+          </ul>
+        </Notice>
       )}
-      {state.error && <p role="alert">{state.error}</p>}
+      {state.error && (
+        <Notice tone="error" role="alert">
+          {state.error}
+        </Notice>
+      )}
     </form>
   );
 }

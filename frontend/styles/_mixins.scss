@@ -1,0 +1,57 @@
+@use "sass:map";
+@use "tokens" as *;
+
+// Min-width media query by breakpoint name: `@include up(md) { … }`.
+@mixin up($name) {
+  @media (min-width: map.get($breakpoints, $name)) {
+    @content;
+  }
+}
+
+// The keyboard focus ring, shown for keyboard focus only.
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+}
+
+// Frosted glass, for headers and sheets. Falls back to a plain surface where backdrop-filter is missing.
+@mixin frosted {
+  background: var(--color-surface-1);
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background: var(--color-glass);
+    -webkit-backdrop-filter: $blur-glass;
+    backdrop-filter: $blur-glass;
+  }
+}
+
+// A raised card surface.
+@mixin surface($level: 1) {
+  background: var(--color-surface-#{$level});
+  border: 1px solid var(--color-border);
+  border-radius: $radius-lg;
+}
+
+// Numbers that line up: codes, timers, scores.
+@mixin mono {
+  font-family: $font-mono;
+  font-variant-numeric: tabular-nums;
+}
+
+// Animation only for people who don't ask for reduced motion.
+@mixin motion {
+  @media (prefers-reduced-motion: no-preference) {
+    @content;
+  }
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,14 +1,21 @@
 import { Suspense } from "react";
+import { Page } from "@/components/page";
 import { JoinForm } from "./join-form";
+import styles from "./participant.module.scss";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main style={{ padding: "2rem", textAlign: "center" }}>
-      <h1>Masterclass Quiz</h1>
+    <Page width="phone">
+      <div className={styles.hero}>
+        <h1 className={styles.title}>
+          Masterclass Quiz<span className={styles.accent}>.</span>
+        </h1>
+        <p className={styles.label}>Enter the Join code on the screen.</p>
+      </div>
       <Suspense fallback={<JoinForm />}>
         <JoinFromLink searchParams={searchParams} />
       </Suspense>
-    </main>
+    </Page>
   );
 }
 

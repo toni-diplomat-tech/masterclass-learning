@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { LiveQuestion } from "@/app/live-question";
 import { RevealedQuestion } from "@/app/revealed-question";
+import { Stack } from "@/components/page";
 import { useLivePhone, type AnswerOutcome, type AnswerResult, type LiveSession, type MyAnswer, type MyResult } from "@/lib/live-masterclass";
+import quiz from "../quiz.module.scss";
+import styles from "../participant.module.scss";
 import { MyScore } from "./my-score";
 import { RecapLink } from "./recap-link";
 
@@ -28,12 +31,25 @@ export function LiveParticipant({ masterclassId, recapToken }: { masterclassId: 
   }, [closed, router]);
 
   return (
-    <>
+    <Stack gap="lg">
       <Screen session={session} myAnswer={myAnswer} myResult={myResult} onChoose={answer} />
       {session.step === "revealed" && <MyScore leaderboard={leaderboard} participantId={participantId} />}
       {session.step === "ended" && <MyScore leaderboard={leaderboard} participantId={participantId} sessionOver />}
       {session.step === "ended" && <RecapLink recapToken={recapToken} />}
-      {!connected && <small style={{ display: "block" }}>Connecting to live updates…</small>}
+      {!connected && <small className={styles.connecting}>Connecting to live updates…</small>}
+    </Stack>
+  );
+}
+
+function Waiting({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <span className={styles.dots} aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
+      {children}
     </>
   );
 }
@@ -51,7 +67,13 @@ function Screen({
 }) {
   switch (session.step) {
     case "waiting":
-      return <p data-testid="waiting">Waiting for the Host to start the next Session…</p>;
+      return (
+        <div className={styles.waiting}>
+          <Waiting>
+            <p data-testid="waiting">Waiting for the Host to start the next Session…</p>
+          </Waiting>
+        </div>
+      );
     case "question": {
       const { question } = session;
       return (
@@ -72,9 +94,11 @@ function Screen({
       );
     case "ended":
       return (
-        <section data-testid="session-over">
+        <section data-testid="session-over" className={styles.waiting}>
           <h2>Session over</h2>
-          <p>Waiting for the Host to start the next Session…</p>
+          <Waiting>
+            <p>Waiting for the Host to start the next Session…</p>
+          </Waiting>
         </section>
       );
   }
@@ -85,7 +109,7 @@ function AnswerStatus({ answer }: { answer: MyAnswer | null }) {
   if (answer.status === "sending") return <p data-testid="answer-status">Sending your Answer…</p>;
   if (answer.status === "locked")
     return (
-      <p data-testid="answer-locked" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+      <p data-testid="answer-locked" className={styles.locked}>
         Answer locked
       </p>
     );
@@ -96,15 +120,24 @@ const OUTCOMES: Record<AnswerOutcome, string> = { Correct: "Correct", Incorrect:
 
 function MyResultLine({ result }: { result: MyResult | null }) {
   if (result === "JoinedAfterStart") {
-    return <p data-testid="my-result">You joined during this Question.</p>;
+    return (
+      <p data-testid="my-result" className={`${quiz.result} ${quiz.resultNote}`}>
+        You joined during this Question.
+      </p>
+    );
   }
   if (result === "AlreadyAnswered") {
     // Answered earlier (e.g. before a reload): this tap isn't necessarily the option that counts.
-    return <p data-testid="my-result">Your earlier Answer counts.</p>;
+    return (
+      <p data-testid="my-result" className={`${quiz.result} ${quiz.resultNote}`}>
+        Your earlier Answer counts.
+      </p>
+    );
   }
+  const outcome = result ?? "TimedOut";
   return (
-    <p data-testid="my-result" style={{ fontSize: "2rem", fontWeight: "bold" }}>
-      {OUTCOMES[result ?? "TimedOut"]}
+    <p data-testid="my-result" className={`${quiz.result} ${outcome === "Correct" ? quiz.resultCorrect : quiz.resultWrong}`}>
+      {OUTCOMES[outcome]}
     </p>
   );
 }

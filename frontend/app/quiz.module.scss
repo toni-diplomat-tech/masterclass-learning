@@ -1,0 +1,142 @@
+// Shared by the phone and the projector: the live Question, its reveal and the Session leaderboard.
+@use "design" as *;
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.large {
+  gap: $space-5;
+}
+
+.top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3;
+}
+
+.questionText {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-black;
+
+  .large & {
+    font-size: $projector-size-question;
+  }
+}
+
+// The countdown: a mono number in a ring; red for the last five seconds.
+.countdown {
+  display: grid;
+  place-items: center;
+  min-width: 4.5rem;
+  height: 4.5rem;
+  padding: 0 $space-3;
+  border-radius: $radius-pill;
+  border: 3px solid var(--color-border-strong);
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-black;
+  line-height: 1;
+
+  @include mono;
+
+  .large & {
+    min-width: 1.6em;
+    height: 1.6em;
+    font-size: $projector-size-countdown;
+  }
+}
+
+.hurry {
+  border-color: var(--color-primary);
+  color: var(--color-primary-text);
+
+  @include motion {
+    animation: pulse 1s $easing infinite;
+  }
+}
+
+.timeUp {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  font-size: $font-size-lg;
+
+  .large & {
+    font-size: $projector-size-option;
+  }
+}
+
+.footer {
+  color: var(--color-text-muted);
+}
+
+.result {
+  padding: $space-3 $space-4;
+  border-radius: $radius-lg;
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-black;
+  text-align: center;
+
+  @include motion {
+    animation: pop $duration-slow $easing;
+  }
+}
+
+.resultCorrect {
+  background: var(--color-correct);
+  color: var(--color-on-correct);
+}
+
+.resultWrong {
+  background: var(--color-wrong);
+  color: var(--color-on-wrong);
+}
+
+.resultNote {
+  background: var(--color-surface-2);
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.leaderboardTitle {
+  text-align: center;
+
+  .projectorBoard & {
+    font-size: $projector-size-question;
+  }
+}
+
+.projectorBoard {
+  max-width: 56rem;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
