@@ -5,7 +5,7 @@ import { hostFetch } from "./host-session";
 
 /**
  * Times are UTC ISO strings; joinCode is null until the Masterclass opens. nextWorkshopId is the Next
- * Workshop, the only one whose Session can start; null once every Workshop has had its Session.
+ * Workshop, the only one whose Session can start; null once every current Workshop has had its Session.
  */
 export type MasterclassOverview = {
   id: number;
