@@ -37,10 +37,31 @@ public sealed class LiveMasterclass(
     }
 
     /// <summary>
-    /// Has the backend timer follow a running Session (a no-op when it already does).
-    /// Transitional: Resume and startup recovery call it until they become module operations.
+    /// Resumes the Masterclass's running Sessions (the projector's Resume button): the backend timer follows
+    /// each one and checks it now, so an overdue Question is revealed and the Session carries on. A Session
+    /// the timer already follows is only checked again, so resuming twice broadcasts nothing twice.
+    /// Returns the Sessions resumed; none once they have ended.
     /// </summary>
-    public void FollowSession(int sessionId) => _timer.Follow(sessionId);
+    public Task<IReadOnlyList<int>> ResumeMasterclassAsync(int masterclassId, CancellationToken cancellationToken = default) =>
+        ResumeAsync(masterclassId, cancellationToken);
+
+    /// <summary>
+    /// Resumes every running Session, of every Masterclass (on startup, after a restart), as
+    /// <see cref="ResumeMasterclassAsync"/> does for one. Returns the Sessions resumed.
+    /// </summary>
+    public Task<IReadOnlyList<int>> ResumeAllSessionsAsync(CancellationToken cancellationToken = default) =>
+        ResumeAsync(null, cancellationToken);
+
+    private async Task<IReadOnlyList<int>> ResumeAsync(int? masterclassId, CancellationToken cancellationToken)
+    {
+        var sessions = await engine.ListRunningSessionsAsync(masterclassId, cancellationToken);
+        foreach (var sessionId in sessions)
+        {
+            _timer.Follow(sessionId);
+            _timer.Wake(sessionId);
+        }
+        return sessions;
+    }
 
     /// <summary>
     /// Makes the backend timer check a followed Session now, e.g. once everyone has answered.
