@@ -102,6 +102,19 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_workshop_counts_as_having_had_its_session_as_soon_as_the_session_starts()
+    {
+        var ready = await ReadySessionFixture.PrepareAsync(Engine, sqlServer.Connection, _time, participants: 0, easy: 1);
+        var beforeAny = await Engine.GetMasterclassAsync(ready.MasterclassId);
+
+        await Engine.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix);
+        var whileItRuns = await Engine.GetMasterclassAsync(ready.MasterclassId);
+
+        Assert.Empty(beforeAny!.WorkshopIdsWithSession);
+        Assert.Equal([ready.WorkshopId], whileItRuns!.WorkshopIdsWithSession);
+    }
+
+    [Fact]
     public async Task The_progress_says_what_the_session_waits_for_and_until_when()
     {
         var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);

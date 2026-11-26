@@ -14,7 +14,8 @@ public enum MasterclassStatus
 /// <summary>
 /// A Masterclass as the Host sees it. Times are UTC; <see cref="JoinCode"/> is null until it opens.
 /// <see cref="NextWorkshopId"/> is the Next Workshop, the only one whose Session can start; null once every
-/// current Workshop of the Course has had its Session.
+/// current Workshop of the Course has had its Session. <see cref="WorkshopIdsWithSession"/> are the Workshops
+/// that have had their Session in it (a started Session counts), whatever their place in Course order now.
 /// </summary>
 public sealed record MasterclassOverview(
     int Id,
@@ -27,7 +28,8 @@ public sealed record MasterclassOverview(
     DateTime CreatedAt,
     DateTime? OpenedAt,
     DateTime? ClosedAt,
-    int? NextWorkshopId);
+    int? NextWorkshopId,
+    IReadOnlyList<int> WorkshopIdsWithSession);
 
 /// <summary>The created Masterclass, or every reason it wasn't created (then <see cref="Masterclass"/> is null).</summary>
 public sealed record MasterclassCreateResult(MasterclassOverview? Masterclass, IReadOnlyList<string> Problems)
