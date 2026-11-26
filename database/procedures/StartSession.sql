@@ -52,14 +52,8 @@ BEGIN
         RETURN;
     END
 
-    -- The Next Workshop: the first current Workshop of the Course, in Course order, without a Session in
-    -- this Masterclass. A started Session counts, so while it runs the Next Workshop is the one after it.
     DECLARE @NextWorkshopId int, @NextWorkshopTitle nvarchar(200);
-    SELECT TOP (1) @NextWorkshopId = w.Id, @NextWorkshopTitle = w.Title
-    FROM dbo.Workshops w
-    WHERE w.CourseId = @CourseId AND w.RetiredAt IS NULL
-        AND NOT EXISTS (SELECT 1 FROM dbo.Sessions s WHERE s.MasterclassId = @MasterclassId AND s.WorkshopId = w.Id)
-    ORDER BY w.Number, w.Id;
+    SELECT @NextWorkshopId = Id, @NextWorkshopTitle = Title FROM dbo.NextWorkshop(@MasterclassId);
 
     IF EXISTS (SELECT 1 FROM dbo.Sessions WHERE MasterclassId = @MasterclassId AND WorkshopId = @WorkshopId)
         INSERT @Problems (Problem) VALUES (N'This Workshop has already had its Session in this Masterclass.');
