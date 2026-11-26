@@ -44,6 +44,18 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_participant_finds_their_masterclass_closed()
+    {
+        var opened = await OpenMasterclassAsync();
+        var joined = await Engine.JoinMasterclassAsync(opened.JoinCode!, null);
+        Assert.Equal(MasterclassStatus.Open, joined!.Participant.MasterclassStatus);
+
+        await Engine.CloseMasterclassAsync(opened.Id);
+
+        Assert.Equal(MasterclassStatus.Closed, (await Engine.GetParticipantAsync(joined.Token))!.MasterclassStatus);
+    }
+
+    [Fact]
     public async Task No_session_starts_in_a_closed_masterclass()
     {
         var session = await RunOneQuestionSessionAsync();
