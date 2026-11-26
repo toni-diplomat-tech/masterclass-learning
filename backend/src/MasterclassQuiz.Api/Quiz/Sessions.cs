@@ -70,10 +70,10 @@ public sealed record SessionEnded(int MasterclassId, int SessionId, DateTime End
 /// <summary>
 /// What <see cref="QuizEngine.AdvanceSessionAsync"/> did: started the next Question, ended the Session,
 /// or nothing (both null) because a Question is running, the reveal pause lasts, or the Session ended earlier.
-/// <see cref="MasterclassClosed"/> is true when ending the last Workshop's Session also made the
-/// Masterclass Closed.
+/// <see cref="MasterclassClosed"/> can only be true with <see cref="Ended"/>: ending the last Workshop's
+/// Session also made the Masterclass Closed.
 /// </summary>
-public sealed record SessionAdvance(QuestionStarted? Started, SessionEnded? Ended, bool MasterclassClosed = false);
+public sealed record SessionAdvance(QuestionStarted? Started, SessionEnded? Ended, bool MasterclassClosed);
 
 /// <summary>
 /// Where a Session stands and when its next step is due (UTC; null once ended): at <see cref="DueAt"/>

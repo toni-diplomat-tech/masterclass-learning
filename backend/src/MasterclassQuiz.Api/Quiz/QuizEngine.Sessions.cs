@@ -87,9 +87,9 @@ public sealed partial class QuizEngine
         var row = await QuerySingleAsync<AdvanceRow>("dbo.AdvanceSession", WithNow(parameters), cancellationToken);
         return row.Advanced switch
         {
-            Advanced.Started => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
+            Advanced.Started => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null, MasterclassClosed: false),
             Advanced.Ended => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value)), row.MasterclassClosed),
-            _ => new SessionAdvance(null, null),
+            _ => new SessionAdvance(null, null, MasterclassClosed: false),
         };
     }
 
