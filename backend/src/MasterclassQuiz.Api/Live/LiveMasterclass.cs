@@ -43,8 +43,8 @@ public sealed class LiveMasterclass(
     public void FollowSession(int sessionId) => _timer.Follow(sessionId);
 
     /// <summary>
-    /// Makes the backend timer check a followed Session now, e.g. once everyone has answered.
-    /// Transitional: the Answer path and Resume call it until they become module operations.
+    /// Makes the backend timer check a followed Session now.
+    /// Transitional: Resume calls it until it becomes a module operation.
     /// </summary>
     public void WakeSession(int sessionId) => _timer.Wake(sessionId);
 
@@ -83,5 +83,25 @@ public sealed class LiveMasterclass(
             await broadcasts.ParticipantCountUpdatedAsync(new ParticipantCount(masterclassId, masterclass.Participants), lifetime.ApplicationStopping);
         }
         return joined;
+    }
+
+    /// <summary>
+    /// The Participant whose token this is answers a running Question with the option at
+    /// <paramref name="option"/>. An accepted Answer broadcasts <see cref="QuizHub.AnswerCountUpdated"/>;
+    /// when it was the last one the Question was waiting for, the backend timer reveals the Question now
+    /// instead of at its deadline. Returns the Answer result, never whether the Answer is correct; a refused Answer broadcasts nothing.
+    /// </summary>
+    public async Task<AnswerResult> SubmitAnswerAsync(string participantToken, int questionId, int option, CancellationToken cancellationToken = default)
+    {
+        var submitted = await engine.SubmitAnswerAsync(participantToken, questionId, option, cancellationToken);
+        if (submitted is { Result: AnswerResult.Accepted, Count: { } count })
+        {
+            await broadcasts.AnswerCountUpdatedAsync(count, lifetime.ApplicationStopping);
+            if (count.EveryoneAnswered)
+            {
+                _timer.Wake(count.SessionId);
+            }
+        }
+        return submitted.Result;
     }
 }
