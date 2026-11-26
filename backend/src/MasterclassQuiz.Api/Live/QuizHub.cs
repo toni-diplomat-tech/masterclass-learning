@@ -9,7 +9,7 @@ namespace MasterclassQuiz.Api.Live;
 /// The live meeting, at <see cref="Path"/>. Each Masterclass has one group (<see cref="MasterclassGroup"/>)
 /// that its broadcasts go to. Like the REST endpoints, the hub is a thin caller of the Quiz engine.
 /// </summary>
-public sealed partial class QuizHub(QuizEngine engine, LiveMasterclass live, IMasterclassBroadcasts broadcasts) : Hub
+public sealed partial class QuizHub(QuizEngine engine, LiveMasterclass live) : Hub
 {
     public const string Path = "/hubs/quiz";
 
@@ -100,16 +100,7 @@ public sealed partial class QuizHub(QuizEngine engine, LiveMasterclass live, IMa
         {
             return new AnswerReply(AnswerResult.UnknownParticipant);
         }
-        var submitted = await engine.SubmitAnswerAsync(token, questionId, option, Context.ConnectionAborted);
-        if (submitted is { Result: AnswerResult.Accepted, Count: { } count })
-        {
-            await broadcasts.AnswerCountUpdatedAsync(count);
-            if (count.EveryoneAnswered)
-            {
-                live.WakeSession(count.SessionId);
-            }
-        }
-        return new AnswerReply(submitted.Result);
+        return new AnswerReply(await live.SubmitAnswerAsync(token, questionId, option, Context.ConnectionAborted));
     }
 
     // The caller's participant cookie (set when they joined); null without one.
