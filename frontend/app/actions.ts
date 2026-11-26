@@ -2,12 +2,13 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { textField } from "@/lib/form-data";
 import { joinMasterclass, PARTICIPANT_COOKIE } from "@/lib/participant";
 
 export type JoinState = { error?: string; joinCode?: string };
 
 export async function join(_previous: JoinState, formData: FormData): Promise<JoinState> {
-  const joinCode = String(formData.get("joinCode") ?? "").replace(/\s/g, "");
+  const joinCode = textField(formData, "joinCode").replace(/\s/g, "");
   if (!/^[0-9]{6}$/.test(joinCode)) return { joinCode, error: "A Join code has 6 digits." };
 
   let result;
