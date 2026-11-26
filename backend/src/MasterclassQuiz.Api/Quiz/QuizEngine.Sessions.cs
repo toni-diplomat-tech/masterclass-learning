@@ -75,8 +75,9 @@ public sealed partial class QuizEngine
 
     /// <summary>
     /// Moves the Session on once the reveal pause (configuration) after its last reveal has passed: starts
-    /// the next Question, or ends the Session after its last one. Does nothing (both results null) while a
-    /// Question is running or the pause lasts, or once the Session has ended.
+    /// the next Question, or ends the Session after its last one. Ending the last Workshop's Session also
+    /// makes the Masterclass Closed, at the same time. Does nothing (both results null) while a Question is
+    /// running or the pause lasts, or once the Session has ended.
     /// </summary>
     public async Task<SessionAdvance> AdvanceSessionAsync(int sessionId, CancellationToken cancellationToken = default)
     {
@@ -86,9 +87,9 @@ public sealed partial class QuizEngine
         var row = await QuerySingleAsync<AdvanceRow>("dbo.AdvanceSession", WithNow(parameters), cancellationToken);
         return row.Advanced switch
         {
-            Advanced.Started => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null),
-            Advanced.Ended => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value))),
-            _ => new SessionAdvance(null, null),
+            Advanced.Started => new SessionAdvance(await GetStartedQuestionAsync(sessionId, cancellationToken), null, MasterclassClosed: false),
+            Advanced.Ended => new SessionAdvance(null, new SessionEnded(row.MasterclassId!.Value, sessionId, Utc(row.EndedAt!.Value)), row.MasterclassClosed),
+            _ => new SessionAdvance(null, null, MasterclassClosed: false),
         };
     }
 
@@ -119,6 +120,7 @@ public sealed partial class QuizEngine
         public Advanced? Advanced { get; init; }
         public int? MasterclassId { get; init; }
         public DateTime? EndedAt { get; init; }
+        public bool MasterclassClosed { get; init; }
     }
 
     // dbo.AdvanceSession's Advanced: what it did (NULL: nothing).

@@ -6,8 +6,9 @@ namespace MasterclassQuiz.Api.Live;
 /// <summary>
 /// The backend timer that moves running Sessions on: for each followed Session it waits until the next
 /// step is due (<see cref="SessionProgress.DueAt"/>), then reveals the running Question or, after the
-/// reveal pause, starts the next one or ends the Session, and broadcasts what happened. The Quiz engine
-/// decides whether a step is due, so a late or early wake-up does no harm. <see cref="Wake"/> makes it
+/// reveal pause, starts the next one or ends the Session (and, with the last Workshop's Session, the
+/// Masterclass), and broadcasts what happened. The Quiz engine decides whether a step is due, so a late
+/// or early wake-up does no harm. <see cref="Wake"/> makes it
 /// look again before the deadline (once every Participant has answered). Internal to the
 /// <see cref="LiveMasterclass"/> module, which follows and wakes Sessions; its broadcasts leave through
 /// the module's broadcast port. It shares the Quiz engine's <see cref="TimeProvider"/>.
@@ -114,6 +115,10 @@ internal sealed class SessionRunner(
         {
             await broadcasts.SessionEndedAsync(ended, stopping);
             await SendLeaderboardAsync(sessionId, stopping);
+            if (advance.MasterclassClosed)
+            {
+                await broadcasts.MasterclassClosedAsync(ended.MasterclassId, stopping);
+            }
         }
         return advance.Started is not null || advance.Ended is not null;
     }

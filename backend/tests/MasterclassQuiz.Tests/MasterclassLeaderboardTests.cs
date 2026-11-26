@@ -31,7 +31,7 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
         await FinishAsync(session.SessionId);
 
         // Session 2: second 500, first 375, third 250 (at the limit).
-        var started = await Engine.StartSessionAsync(session.MasterclassId, await WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(session.MasterclassId, await Engine.WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
         var question = started.Session!.FirstQuestion.QuestionId;
         await Engine.SubmitAnswerAsync(second, question, 1);
         _time.Advance(TimeSpan.FromMilliseconds(1_500));
@@ -61,6 +61,25 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_participant_finds_their_rank_and_points_on_the_masterclass_leaderboard()
+    {
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 3, easy: 1);
+        var (first, second, third) = (session.Tokens[0], session.Tokens[1], session.Tokens[2]);
+        await Engine.SubmitAnswerAsync(first, session.Question.QuestionId, 1);
+        await Engine.SubmitAnswerAsync(third, session.Question.QuestionId, 2);
+        _time.Advance(TimeSpan.FromMilliseconds(1_500));
+        await Engine.SubmitAnswerAsync(second, session.Question.QuestionId, 1);
+        await FinishAsync(session.SessionId);
+        var late = (await Engine.JoinMasterclassAsync(session.JoinCode, null))!.Token;
+
+        Assert.Equal(new MasterclassRank(1, 500, 3), await Engine.GetMasterclassRankAsync(await ParticipantIdAsync(first)));
+        Assert.Equal(new MasterclassRank(2, 375, 3), await Engine.GetMasterclassRankAsync(await ParticipantIdAsync(second)));
+        Assert.Equal(new MasterclassRank(3, 0, 3), await Engine.GetMasterclassRankAsync(await ParticipantIdAsync(third)));
+        Assert.Null(await Engine.GetMasterclassRankAsync(await ParticipantIdAsync(late)));
+        Assert.Null(await Engine.GetMasterclassRankAsync(-1));
+    }
+
+    [Fact]
     public async Task There_is_no_leaderboard_for_an_unknown_masterclass()
     {
         Assert.Null(await Engine.GetMasterclassLeaderboardAsync(-1));
@@ -74,9 +93,5 @@ public sealed class MasterclassLeaderboardTests(SqlServerFixture sqlServer)
 
     private async Task<string> NicknameAsync(string token) => (await Engine.GetParticipantAsync(token))!.Nickname;
 
-    private async Task<int> WorkshopIdAsync(int masterclassId, string slug)
-    {
-        var courseId = (await Engine.GetMasterclassAsync(masterclassId))!.CourseId;
-        return (await Engine.ListCoursesAsync()).Single(c => c.Id == courseId).Workshops.Single(w => w.Slug == slug).Id;
-    }
+    private async Task<int> ParticipantIdAsync(string token) => (await Engine.GetParticipantAsync(token))!.Id;
 }

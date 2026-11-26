@@ -26,4 +26,15 @@ public sealed partial class QuizEngine
         parameters.Add("MasterclassId", masterclassId);
         return ProcedureJson.Read<MasterclassLeaderboard>(await QueryJsonAsync("dbo.GetMasterclassLeaderboard", parameters, cancellationToken));
     }
+
+    /// <summary>
+    /// The Participant's rank on their Masterclass leaderboard; null if there is no such Participant or they
+    /// are not on it (no Answer to a revealed Question yet).
+    /// </summary>
+    public async Task<MasterclassRank?> GetMasterclassRankAsync(int participantId, CancellationToken cancellationToken = default)
+    {
+        var parameters = new DynamicParameters();
+        parameters.Add("ParticipantId", participantId);
+        return ProcedureJson.Read<MasterclassRank>(await QueryJsonAsync("dbo.GetMasterclassRank", parameters, cancellationToken));
+    }
 }

@@ -29,7 +29,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
         _time.Advance(TimeSpan.FromMilliseconds(1));
         var afterPause = await Engine.AdvanceSessionAsync(session.SessionId);
 
-        Assert.Equal(new SessionAdvance(null, null), duringPause);
+        Assert.Equal(new SessionAdvance(null, null, MasterclassClosed: false), duringPause);
         var next = afterPause.Started!;
         Assert.Null(afterPause.Ended);
         Assert.Equal((2, 2, session.Questions[1].QuestionId), (next.Number, next.QuestionCount, next.QuestionId));
@@ -42,7 +42,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
         var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 2);
         _time.Advance(TimeSpan.FromMinutes(1));
 
-        Assert.Equal(new SessionAdvance(null, null), await Engine.AdvanceSessionAsync(session.SessionId));
+        Assert.Equal(new SessionAdvance(null, null, MasterclassClosed: false), await Engine.AdvanceSessionAsync(session.SessionId));
         Assert.Equal(1, (await Engine.GetStartedQuestionAsync(session.SessionId))!.Number);
     }
 
@@ -58,8 +58,8 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
         var again = await Engine.AdvanceSessionAsync(session.SessionId);
 
         Assert.True(revealed!.LastQuestion);
-        Assert.Equal(new SessionAdvance(null, new SessionEnded(session.MasterclassId, session.SessionId, _time.GetUtcNow().UtcDateTime)), advanced);
-        Assert.Equal(new SessionAdvance(null, null), again);
+        Assert.Equal(new SessionAdvance(null, new SessionEnded(session.MasterclassId, session.SessionId, _time.GetUtcNow().UtcDateTime), MasterclassClosed: false), advanced);
+        Assert.Equal(new SessionAdvance(null, null, MasterclassClosed: false), again);
     }
 
     [Fact]

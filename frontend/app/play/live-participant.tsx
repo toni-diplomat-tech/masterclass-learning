@@ -25,7 +25,8 @@ export function LiveParticipant({ masterclassId, recapToken }: { masterclassId: 
   const { session, leaderboard, connected, closed, participantId, myAnswer, myResult, answer } = useLivePhone(masterclassId);
   const router = useRouter();
 
-  // Closed: the page renders again as "ended", with the Recap link.
+  // Masterclass Closed (by the Host, or as the last Workshop's Session ended): the page renders again as
+  // the Masterclass Closed screen, with the Participant's rank on the Masterclass leaderboard and the Recap link.
   useEffect(() => {
     if (closed) router.refresh();
   }, [closed, router]);

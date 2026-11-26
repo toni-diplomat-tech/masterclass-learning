@@ -25,3 +25,9 @@ public sealed record MasterclassLeaderboard(int MasterclassId, IReadOnlyList<Mas
 
 /// <summary>One Participant on the Masterclass leaderboard. Equal <see cref="Points"/> share a <see cref="Rank"/> (1, 1, 3).</summary>
 public sealed record MasterclassLeaderboardEntry(int Rank, int ParticipantId, string Nickname, int Points);
+
+/// <summary>
+/// A Participant's rank on their Masterclass leaderboard: their <see cref="Rank"/> and <see cref="Points"/>,
+/// out of the <see cref="Of"/> Participants on it.
+/// </summary>
+public sealed record MasterclassRank(int Rank, int Points, int Of);
