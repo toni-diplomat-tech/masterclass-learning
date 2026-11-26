@@ -28,7 +28,7 @@ public interface IMasterclassBroadcasts
     /// <summary><see cref="QuizHub.LeaderboardUpdated"/>: the Session leaderboard after a reveal or the end.</summary>
     Task LeaderboardUpdatedAsync(SessionLeaderboard leaderboard, CancellationToken cancellationToken = default);
 
-    /// <summary><see cref="QuizHub.MasterclassClosed"/>: the Host closed the Masterclass.</summary>
+    /// <summary><see cref="QuizHub.MasterclassClosed"/>: the Host closed the Masterclass, or its last Workshop's Session ended.</summary>
     Task MasterclassClosedAsync(int masterclassId, CancellationToken cancellationToken = default);
 }
 
