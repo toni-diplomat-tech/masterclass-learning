@@ -160,6 +160,26 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
+    public async Task A_workshop_retired_from_the_course_is_not_waited_for()
+    {
+        var file = SessionFiles.WithWorkshopQuestions(easy: 1, medium: 0, hard: 0);
+        var meeting = await OpenMeetingAsync(file);
+        // Re-import without the first Workshop: it is retired, with its Lessons and Questions.
+        var unitTests = file["workshops"]!.AsArray()[0]!.AsObject();
+        var lessons = unitTests["lessons"]!.AsArray().Select(l => (string)l!["slug"]!).ToHashSet();
+        file["workshops"]!.AsArray().Remove(unitTests);
+        foreach (var question in file["questions"]!.AsArray().Where(q => lessons.Contains((string)q!["lesson"]!)).ToList())
+        {
+            file["questions"]!.AsArray().Remove(question);
+        }
+        Assert.Empty((await _engine.ImportCourseAsync(file.ToJsonString())).Problems);
+
+        var started = await _engine.StartSessionAsync(meeting.MasterclassId, await _engine.WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+
+        Assert.Empty(started.Problems);
+    }
+
+    [Fact]
     public async Task A_session_starts_only_in_an_open_masterclass()
     {
         var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);

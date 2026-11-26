@@ -8,8 +8,9 @@ public sealed partial class QuizEngine
     /// <summary>
     /// Starts a Workshop's Session in an Open Masterclass: selects <paramref name="mix"/> Questions at random
     /// within each Difficulty (with the fallback rule when a Difficulty runs short), orders them Easy to Hard
-    /// and starts the first one, whose deadline is its configured time limit from now. A Workshop gets at
-    /// most one Session per Masterclass, and only one Session runs at a time.
+    /// and starts the first one, whose deadline is its configured time limit from now. Only the Next Workshop
+    /// can start its Session, and only while no other Session runs: Workshops run in Course order, none
+    /// skipped, each with one Session per Masterclass.
     /// </summary>
     public async Task<SessionStartResult> StartSessionAsync(int masterclassId, int workshopId, DifficultyCounts mix, CancellationToken cancellationToken = default)
     {
