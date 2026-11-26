@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { openMasterclassAction, type OpenMasterclassState } from "@/app/host/actions";
+import { openMasterclassAction, type MasterclassActionState } from "@/app/host/actions";
 import { Button } from "@/components/button";
 import { Notice } from "@/components/notice";
+import { ProblemsNotice } from "@/components/problems-notice";
 import styles from "./projector.module.scss";
 
-const initialState: OpenMasterclassState = {};
+const initialState: MasterclassActionState = {};
 
 /**
  * The Host's Open Masterclass button on the projector of a Draft, for when the meeting starts. Only one
@@ -21,15 +22,7 @@ export function OpenMasterclassForm({ masterclassId }: { masterclassId: number }
       <Button type="submit" size="lg" loading={pending} data-testid="open-masterclass">
         {pending ? "Opening…" : "Open Masterclass"}
       </Button>
-      {state.problems && (
-        <Notice tone="error" role="alert" data-testid="open-masterclass-problems">
-          <ul className={styles.problems}>
-            {state.problems.map((problem, index) => (
-              <li key={index}>{problem}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
+      <ProblemsNotice problems={state.problems} data-testid="open-masterclass-problems" />
       {state.error && (
         <Notice tone="error" role="alert">
           {state.error}

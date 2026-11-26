@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
-import { closeMasterclassAction, type CloseMasterclassState } from "@/app/host/actions";
+import { closeMasterclassAction, type MasterclassActionState } from "@/app/host/actions";
 import { Button } from "@/components/button";
 import { Notice } from "@/components/notice";
+import { ProblemsNotice } from "@/components/problems-notice";
 import styles from "./projector.module.scss";
 
-const initialState: CloseMasterclassState = {};
+const initialState: MasterclassActionState = {};
 
 /** The Host's Close Masterclass button on the projector, for when the meeting ends. Asks first: closing is final. */
 export function CloseMasterclassForm({ masterclassId }: { masterclassId: number }) {
@@ -23,15 +24,7 @@ export function CloseMasterclassForm({ masterclassId }: { masterclassId: number 
       <Button type="submit" variant="danger" loading={pending} data-testid="close-masterclass">
         {pending ? "Closing…" : "Close Masterclass"}
       </Button>
-      {state.problems && (
-        <Notice tone="error" role="alert" data-testid="close-masterclass-problems">
-          <ul className={styles.problems}>
-            {state.problems.map((problem, index) => (
-              <li key={index}>{problem}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
+      <ProblemsNotice problems={state.problems} data-testid="close-masterclass-problems" />
       {state.error && (
         <Notice tone="error" role="alert">
           {state.error}
