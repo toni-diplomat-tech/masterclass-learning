@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { backendUrl } from "./backend";
-import type { MasterclassStatus } from "./masterclasses";
+import type { MasterclassStatus } from "./domain";
 import { readSetCookie } from "./set-cookie";
 
 // Server-side only: joining a Masterclass and recognizing the Participant by their cookie.

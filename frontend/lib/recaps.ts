@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { backendUrl } from "./backend";
-import type { MasterclassStatus } from "./masterclasses";
+import type { MasterclassStatus } from "./domain";
 import { PARTICIPANT_COOKIE } from "./participant";
 
 // Server-side only: Recaps, readable by anyone with the link (no login, no expiry).

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import type { QuestionStarted } from "@/lib/live";
+import type { QuestionStarted } from "@/lib/live-masterclass";
 
 /** Whole seconds until the deadline (never below 0), ticking. For display only: the server decides. */
 function useSecondsLeft(deadline: string): number {
@@ -18,24 +18,27 @@ function useSecondsLeft(deadline: string): number {
 
 /**
  * A running Question with its options and a countdown, on the projector (`large`) or a phone. With
- * `onChoose` (the phone), the options are buttons until one is `chosen` or time is up. `footer` goes
- * under the options (the projector's answer count, the phone's "Answer locked").
+ * `onChoose` (the phone), the options are buttons until one is `chosen`, they are `locked` (the phone
+ * has an Answer, or joined too late to give one) or time is up. `footer` goes under the options (the
+ * projector's answer count, the phone's "Answer locked").
  */
 export function LiveQuestion({
   question,
   large = false,
   chosen = null,
+  locked: answerLocked = false,
   onChoose,
   footer,
 }: {
   question: QuestionStarted;
   large?: boolean;
   chosen?: number | null;
+  locked?: boolean;
   onChoose?: (position: number) => void;
   footer?: ReactNode;
 }) {
   const secondsLeft = useSecondsLeft(question.deadline);
-  const locked = chosen !== null || secondsLeft === 0;
+  const locked = answerLocked || chosen !== null || secondsLeft === 0;
 
   return (
     <section data-testid="question" style={{ maxWidth: "60rem", margin: "0 auto" }}>

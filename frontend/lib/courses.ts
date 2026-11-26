@@ -1,5 +1,5 @@
 import { hostFetch } from "./host-session";
-import type { DifficultyCounts } from "./live";
+import type { DifficultyCounts } from "./domain";
 
 // Server-side only: the Host's Course endpoints on the backend.
 

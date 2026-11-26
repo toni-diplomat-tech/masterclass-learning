@@ -1,4 +1,4 @@
-import type { SessionLeaderboard } from "@/lib/leaderboard";
+import type { SessionLeaderboard } from "@/lib/live-masterclass";
 
 /**
  * The Session leaderboard on the projector: rank, Nickname and points, highest first, the top `limit`

@@ -1,6 +1,6 @@
-import type { MasterclassStatus } from "./masterclasses";
+import type { MasterclassStatus } from "./domain";
 import { hostFetch } from "./host-session";
-import type { Difficulty } from "./live";
+import type { Difficulty } from "./domain";
 
 // Server-side only: the Host's results of a Masterclass. They hold every Participant's Recap token, so
 // they come only through hostFetch.
