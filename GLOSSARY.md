@@ -31,7 +31,7 @@ _Avoid_: Course file, Upload, Export
 ## Live quiz
 
 **Masterclass**:
-One group being taught a Course in a single meeting, ending when the Host closes it; it holds that group's Sessions and Results (e.g. "Dev team 2026"). The same Course can be taught in many Masterclasses. It is always Masterclass Draft, Masterclass Open or Masterclass Closed.
+One group being taught a Course in a single meeting, ending when its last Workshop's Session ends or when the Host closes it earlier; it holds that group's Sessions and Results (e.g. "Dev team 2026"). The same Course can be taught in many Masterclasses. It is always Masterclass Draft, Masterclass Open or Masterclass Closed.
 _Avoid_: Course, Cohort, Class, Group
 
 **Masterclass Draft**:
@@ -43,8 +43,12 @@ A Masterclass that has a Join code, so Participants can join and its Sessions ca
 _Avoid_: Open (alone), Active, Live, Started
 
 **Masterclass Closed**:
-A Masterclass the Host has ended at the close of the meeting; nobody can join and no more Sessions run, but its Results and Recaps stay available.
+A Masterclass that has ended, either on its own when its last Workshop's Session ends or by the Host at the close of the meeting; nobody can join and no more Sessions run, but its Results and Recaps stay available.
 _Avoid_: Closed (alone), Finished, Archived, Ended
+
+**Next Workshop**:
+The first Workshop of the Course whose Session has not run yet in a Masterclass: the one the Host presents next and the only one whose Session can start. Workshops are taught in Course order, none skipped.
+_Avoid_: Current Workshop, Active Workshop
 
 **Session**:
 The one live quiz for a Workshop within a Masterclass, run by a Host after presenting it, using a random selection of that Workshop's Questions in the Difficulty mix the Host sets for it.
@@ -79,7 +83,7 @@ A Participant's personal summary of a Masterclass, by Workshop: the Questions th
 _Avoid_: Report (ambiguous with Results), Feedback, Summary
 
 **Not attended**:
-A Participant missing a Workshop's whole Session, e.g. by joining the Masterclass later; their Recap points them to the Workshop's Lessons instead.
+A Participant missing a Workshop's whole Session, either by joining the Masterclass later or because the Masterclass closed before that Workshop's Session ran; their Recap points them to the Workshop's Lessons instead.
 _Avoid_: Absent, Skipped
 
 **Perfect score**:
