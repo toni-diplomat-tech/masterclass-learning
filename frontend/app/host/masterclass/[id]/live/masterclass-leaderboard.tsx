@@ -1,4 +1,6 @@
+import { Leaderboard } from "@/components/leaderboard";
 import type { MasterclassLeaderboard } from "@/lib/masterclasses";
+import quiz from "@/app/quiz.module.scss";
 
 /**
  * The Masterclass leaderboard on the projector at the end of the meeting: rank, Nickname and points summed
@@ -6,22 +8,12 @@ import type { MasterclassLeaderboard } from "@/lib/masterclasses";
  */
 export function MasterclassLeaderboardTable({ leaderboard }: { leaderboard: MasterclassLeaderboard }) {
   return (
-    <section data-testid="masterclass-leaderboard" style={{ maxWidth: "40rem", margin: "1rem auto" }}>
-      <h2 style={{ fontSize: "2.5rem" }}>Masterclass leaderboard</h2>
+    <section data-testid="masterclass-leaderboard" className={`${quiz.leaderboard} ${quiz.projectorBoard}`}>
+      <h2 className={quiz.leaderboardTitle}>Masterclass leaderboard</h2>
       {leaderboard.entries.length === 0 ? (
-        <p>Nobody scored in this Masterclass.</p>
+        <p className={quiz.muted}>Nobody scored in this Masterclass.</p>
       ) : (
-        <table style={{ width: "100%", fontSize: "1.75rem", borderCollapse: "collapse" }}>
-          <tbody>
-            {leaderboard.entries.map((entry) => (
-              <tr key={entry.participantId} data-testid="masterclass-leaderboard-entry">
-                <td style={{ textAlign: "right", paddingRight: "1rem", width: "3rem" }}>{entry.rank}.</td>
-                <td style={{ textAlign: "left" }}>{entry.nickname}</td>
-                <td style={{ textAlign: "right" }}>{entry.points}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Leaderboard rows={leaderboard.entries} rowTestId="masterclass-leaderboard-entry" large />
       )}
     </section>
   );

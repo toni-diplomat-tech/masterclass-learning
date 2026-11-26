@@ -1,0 +1,179 @@
+@use "sass:map";
+@use "palette" as *;
+@use "design" as *;
+
+// ---- Themes --------------------------------------------------------------------------------------
+// System is the absence of data-theme: the media query decides. An explicit choice (the theme cookie,
+// applied by the <head> script in app/layout.tsx) sets data-theme="dark" or "light" and wins.
+
+@mixin theme($name) {
+  @each $token, $value in map.get($themes, $name) {
+    --color-#{$token}: #{$value};
+  }
+
+  color-scheme: $name;
+}
+
+:root {
+  @include theme(light);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include theme(dark);
+  }
+}
+
+:root[data-theme="dark"] {
+  @include theme(dark);
+}
+
+// ---- Reset and base ------------------------------------------------------------------------------
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-family: $font-sans;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  line-height: $line-height-tight;
+  font-weight: $font-weight-black;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: $font-size-3xl;
+}
+
+h2 {
+  font-size: $font-size-xl;
+}
+
+h3 {
+  font-size: $font-size-lg;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--color-primary-text);
+  text-underline-offset: 0.2em;
+  border-radius: 2px;
+
+  @include focus-ring;
+}
+
+ul,
+ol {
+  padding-left: 1.25em;
+}
+
+small {
+  color: var(--color-text-muted);
+  font-size: $font-size-sm;
+}
+
+strong {
+  font-weight: $font-weight-bold;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+// Native form controls share one look; buttons go through components/button.
+input,
+select {
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border-strong);
+  border-radius: $radius-sm;
+  padding: $space-2 $space-3;
+  min-height: 2.75rem;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 1px;
+  }
+}
+
+input[type="file"] {
+  padding: $space-2;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+// Data tables in the back office and results.
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: $space-2 $space-3;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+thead th {
+  color: var(--color-text-muted);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+tbody th {
+  font-weight: $font-weight-medium;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,4 @@
+// The one entry point for component styles: `@use "design" as *;` in any *.module.scss
+// (next.config.ts puts styles/ on the Sass load path). Emits no CSS.
+@forward "tokens";
+@forward "mixins";

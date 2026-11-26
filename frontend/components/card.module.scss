@@ -1,0 +1,20 @@
+@use "design" as *;
+
+.card {
+  @include surface(1);
+
+  box-shadow: $shadow-raised;
+  min-width: 0;
+}
+
+.padded {
+  padding: $space-5;
+
+  @include up(md) {
+    padding: $space-6;
+  }
+}
+
+.glass {
+  @include frosted;
+}

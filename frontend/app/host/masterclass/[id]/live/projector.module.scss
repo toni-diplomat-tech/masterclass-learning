@@ -1,0 +1,198 @@
+// The Host's projector: read from across the room, so sizes follow the viewport.
+@use "design" as *;
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-2 $space-4;
+  margin-bottom: $space-5;
+  font-size: $font-size-base;
+}
+
+.nav {
+  display: flex;
+  gap: $space-4;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.title {
+  font-size: $projector-size-question;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-6;
+  text-align: center;
+}
+
+// The Join invitation: address and giant code beside the QR code on wide screens.
+.invite {
+  display: grid;
+  align-items: center;
+  gap: $space-6;
+  width: 100%;
+
+  @include up(lg) {
+    grid-template-columns: 1.4fr 1fr;
+    text-align: left;
+  }
+}
+
+.joinAt {
+  color: var(--color-text-muted);
+}
+
+.joinHost {
+  color: var(--color-text);
+}
+
+.joinCode {
+  margin: $space-3 0;
+  font-size: $projector-size-code;
+  font-weight: $font-weight-black;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--color-text);
+
+  @include mono;
+}
+
+// A QR code needs dark on light whatever the theme.
+.qr {
+  justify-self: center;
+  width: min(40vh, 80vw);
+  padding: $space-3;
+  border-radius: $radius-lg;
+  background: var(--color-qr-bg);
+  box-shadow: $shadow-raised;
+
+  svg {
+    width: 100%;
+    height: auto;
+  }
+}
+
+.count {
+  font-size: $projector-size-question;
+  font-weight: $font-weight-black;
+  line-height: 1.1;
+
+  .compact & {
+    font-size: $projector-size-body;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.countNumber {
+  color: var(--color-primary-text);
+
+  @include mono;
+}
+
+.countLabel {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: $projector-size-body;
+  font-weight: $font-weight-medium;
+
+  .compact & {
+    display: inline;
+  }
+}
+
+.answerCount {
+  font-size: $projector-size-question;
+  font-weight: $font-weight-black;
+  color: var(--color-text);
+
+  @include mono;
+}
+
+.sessionOver {
+  font-size: $projector-size-question;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: $space-3;
+  font-size: $font-size-base;
+}
+
+.closeForm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-base;
+}
+
+.problems {
+  list-style: none;
+  padding: 0;
+}
+
+.dialog {
+  width: min(100%, 36rem);
+  text-align: left;
+  font-size: $font-size-base;
+}
+
+.dialogForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--color-text-muted);
+
+  select {
+    width: 100%;
+    color: var(--color-text);
+    font-size: $font-size-base;
+  }
+}
+
+.mixInput {
+  width: 5rem;
+  text-align: right;
+
+  @include mono;
+}
+
+.num {
+  text-align: right;
+}
+
+.hint {
+  font-size: $font-size-sm;
+  color: var(--color-text-muted);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.openForm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-5;
+}
+
+.block {
+  display: block;
+}

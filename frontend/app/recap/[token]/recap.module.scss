@@ -1,0 +1,67 @@
+@use "design" as *;
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.workshop {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.perfect {
+  align-self: flex-start;
+  padding: $space-1 $space-4;
+  border-radius: $radius-pill;
+  background: var(--color-correct);
+  color: var(--color-on-correct);
+  font-weight: $font-weight-black;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.lessons {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.lesson {
+  padding-top: $space-3;
+  border-top: 1px solid var(--color-border);
+}
+
+.questions {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  margin-top: $space-2;
+}
+
+.question {
+  padding: $space-3 $space-4;
+  border-radius: $radius-md;
+  background: var(--color-surface-2);
+}
+
+.answer {
+  font-size: $font-size-sm;
+  color: var(--color-text-muted);
+}
+
+.wrong {
+  color: var(--color-wrong-text);
+  font-weight: $font-weight-bold;
+}
+
+.correct {
+  color: var(--color-correct-text);
+  font-weight: $font-weight-bold;
+}

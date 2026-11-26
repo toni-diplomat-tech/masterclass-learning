@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   output: "standalone",
+  // Styles `@use "design" as *;` (and globals.scss the palette) from styles/. Relative to the cwd: Next runs in frontend/.
+  sassOptions: { loadPaths: ["styles"] },
   experimental: {
     // Course import files are uploaded through a Server Action; the default limit is 1 MB.
     serverActions: { bodySizeLimit: "5mb" },

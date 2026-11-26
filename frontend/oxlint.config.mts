@@ -37,7 +37,7 @@ export default defineConfig({
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "import/no-cycle": "error",
-    "import/no-unassigned-import": ["error", { allow: ["**/*.css"] }],
+    "import/no-unassigned-import": ["error", { allow: ["**/*.css", "**/*.scss"] }],
 
     // Off on purpose:
     // React 19's JSX transform needs no React in scope.

@@ -1,0 +1,78 @@
+@use "design" as *;
+
+.page {
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: $space-5 $space-4 max(#{$space-7}, env(safe-area-inset-bottom));
+
+  @include up(md) {
+    padding: $space-6 $space-5 $space-8;
+  }
+}
+
+.phone {
+  max-width: $width-phone;
+}
+
+.text {
+  max-width: $width-text;
+}
+
+.wide {
+  max-width: $width-page;
+}
+
+.projector {
+  max-width: $width-projector;
+  font-size: $projector-size-body;
+}
+
+.center {
+  text-align: center;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: $space-2;
+}
+
+.chip {
+  padding: $space-1 $space-3;
+  border-radius: $radius-pill;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  .projector & {
+    font-size: 0.8em;
+  }
+}
+
+.eyebrow {
+  color: var(--color-text-muted);
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.sm {
+  gap: $space-2;
+}
+
+.md {
+  gap: $space-4;
+}
+
+.lg {
+  gap: $space-6;
+}

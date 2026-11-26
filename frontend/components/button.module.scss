@@ -1,0 +1,110 @@
+@use "design" as *;
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border: 1px solid transparent;
+  border-radius: $radius-pill;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+
+  @include focus-ring;
+
+  @include motion {
+    transition:
+      transform $duration-fast $easing,
+      background $duration-fast $easing,
+      filter $duration-fast $easing;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.md {
+  min-height: 2.75rem;
+  padding: $space-2 $space-5;
+  font-size: $font-size-base;
+}
+
+.lg {
+  min-height: $tap-target + 0.5rem;
+  padding: $space-3 $space-6;
+  font-size: $font-size-lg;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+.primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+}
+
+.secondary {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-border);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-3);
+  }
+}
+
+// Destructive but not the main action: red outline, filled on hover.
+.danger {
+  background: transparent;
+  color: var(--color-primary-text);
+  border-color: var(--color-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+
+  &:hover:not(:disabled) {
+    color: var(--color-text);
+    background: var(--color-surface-2);
+  }
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+
+  @include motion {
+    animation: spin 0.7s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

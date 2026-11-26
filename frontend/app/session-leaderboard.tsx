@@ -1,4 +1,6 @@
+import { Leaderboard } from "@/components/leaderboard";
 import type { SessionLeaderboard } from "@/lib/live-masterclass";
+import styles from "./quiz.module.scss";
 
 /**
  * The Session leaderboard on the projector: rank, Nickname and points, highest first, the top `limit`
@@ -8,24 +10,16 @@ export function SessionLeaderboardTable({ leaderboard, limit = 10 }: { leaderboa
   if (!leaderboard) return null;
   const shown = leaderboard.entries.slice(0, limit);
   return (
-    <section data-testid="session-leaderboard" style={{ maxWidth: "40rem", margin: "1rem auto" }}>
-      <h2 style={{ fontSize: "2rem" }}>{leaderboard.ended ? "Final leaderboard" : "Leaderboard"}</h2>
+    <section data-testid="session-leaderboard" className={`${styles.leaderboard} ${styles.projectorBoard}`}>
+      <h2 className={styles.leaderboardTitle}>{leaderboard.ended ? "Final leaderboard" : "Leaderboard"}</h2>
       {shown.length === 0 ? (
-        <p>No points yet.</p>
+        <p className={styles.muted}>No points yet.</p>
       ) : (
-        <table style={{ width: "100%", fontSize: "1.5rem", borderCollapse: "collapse" }}>
-          <tbody>
-            {shown.map((entry) => (
-              <tr key={entry.participantId} data-testid="leaderboard-entry">
-                <td style={{ textAlign: "right", paddingRight: "1rem", width: "3rem" }}>{entry.rank}.</td>
-                <td style={{ textAlign: "left" }}>{entry.nickname}</td>
-                <td style={{ textAlign: "right" }}>{entry.points}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Leaderboard rows={shown} rowTestId="leaderboard-entry" large />
       )}
-      {leaderboard.entries.length > shown.length && <p>…and {leaderboard.entries.length - shown.length} more</p>}
+      {leaderboard.entries.length > shown.length && (
+        <p className={styles.muted}>…and {leaderboard.entries.length - shown.length} more</p>
+      )}
     </section>
   );
 }

@@ -1,4 +1,6 @@
+import { Card } from "@/components/card";
 import type { SessionLeaderboard } from "@/lib/live-masterclass";
+import styles from "../participant.module.scss";
 
 /**
  * This Participant's score on their phone, from the Session leaderboard: after a reveal, the points the
@@ -19,19 +21,19 @@ export function MyScore({
 
   if (leaderboard.ended || sessionOver) {
     return (
-      <section data-testid="my-score" style={{ fontSize: "1.5rem" }}>
-        <p style={{ fontSize: "2rem", fontWeight: "bold", margin: "0.5rem 0" }}>
+      <Card data-testid="my-score" className={styles.score}>
+        <p className={styles.points}>
           {me.points} {me.points === 1 ? "point" : "points"}
         </p>
-        <p data-testid="my-rank" style={{ margin: "0.5rem 0" }}>
+        <p data-testid="my-rank" className={styles.label}>
           Rank {me.rank} of {leaderboard.entries.length}
         </p>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <p data-testid="my-score" style={{ fontSize: "1.25rem" }}>
+    <p data-testid="my-score" className={styles.scoreLine}>
       +{me.questionPoints} points · {me.points} in this Session
     </p>
   );

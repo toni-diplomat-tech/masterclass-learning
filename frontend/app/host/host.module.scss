@@ -1,0 +1,123 @@
+// The Host's back office, login and results pages.
+@use "design" as *;
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2 $space-4;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.sectionTitle {
+  font-size: $font-size-2xl;
+}
+
+// Inline forms: fields side by side where there is room, stacked on a phone.
+.inlineForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: $space-3;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--color-text-muted);
+
+  input,
+  select {
+    width: 100%;
+    color: var(--color-text);
+    font-size: $font-size-base;
+    font-weight: $font-weight-regular;
+  }
+}
+
+.login {
+  max-width: 24rem;
+  margin: $space-6 auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+// Tables scroll sideways on a phone instead of squashing.
+.tableWrap {
+  overflow-x: auto;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  font-weight: $font-weight-bold;
+  letter-spacing: 0.08em;
+
+  @include mono;
+}
+
+.status {
+  display: inline-block;
+  padding: 0 $space-2;
+  border-radius: $radius-pill;
+  background: var(--color-surface-2);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statusOpen {
+  background: var(--color-correct);
+  color: var(--color-on-correct);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-1 $space-3;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.plainCell {
+  font-weight: $font-weight-regular;
+}

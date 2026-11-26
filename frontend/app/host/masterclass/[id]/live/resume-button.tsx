@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
+import styles from "./projector.module.scss";
 
 /**
  * Manual fallback for restart recovery: asks the backend to follow the running Session again, so an
@@ -21,10 +23,10 @@ export function ResumeButton({ onResume }: { onResume: () => Promise<void> }) {
 
   return (
     <p>
-      <button type="button" data-testid="resume-session" onClick={resume} disabled={status === "resuming"}>
+      <Button variant="ghost" data-testid="resume-session" onClick={resume} loading={status === "resuming"}>
         Resume
-      </button>
-      {status === "failed" && <small style={{ display: "block" }}>Could not resume. Check the connection and try again.</small>}
+      </Button>
+      {status === "failed" && <small className={styles.block}>Could not resume. Check the connection and try again.</small>}
     </p>
   );
 }
