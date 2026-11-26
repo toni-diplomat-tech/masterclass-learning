@@ -11,7 +11,7 @@ function useSecondsLeft(deadline: string): number {
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(timer);
-  }, [deadlineMs]);
+  }, []);
 
   return Math.max(0, Math.ceil((deadlineMs - now) / 1000));
 }

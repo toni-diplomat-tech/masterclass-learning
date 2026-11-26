@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "oxlint"
   },
   "dependencies": {
     "@microsoft/signalr": "^11.0.0",
@@ -20,8 +20,8 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.6",
+    "oxlint": "^1.95.0",
+    "oxlint-tsgolint": "^7.0.2008",
     "typescript": "^5"
   }
 }

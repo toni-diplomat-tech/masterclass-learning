@@ -12,6 +12,7 @@ Live quiz app: a Host presents each Workshop of a Course, then Participants answ
 
 - **Quiz engine is the seam.** Business rules live in SQL Server stored procedures (ADR 0002). The SignalR hub and REST endpoints call the C# Quiz engine; only the engine calls procedures, through Dapper. Tests cross the same seam against a real SQL Server in Testcontainers, so Docker Desktop must be running.
 - **Time is UTC from the server.** The backend reads `TimeProvider` UTC time and passes it to procedures as `@Now`; procedures take time only from that parameter. Store times as UTC `datetime2`.
+- **Frontend lint is oxlint.** `npm run lint` in `frontend/` lints type-aware and type-checks in one pass (ADR 0003); keep it clean before committing.
 - **Public repo: committed files stay generic.** Examples use the made-up "Testing Fundamentals" Course. Real course material, Question files and import files live in git-ignored `content/`. Never name the employer, the source course or its author in committed files.
 
 ## Agent skills

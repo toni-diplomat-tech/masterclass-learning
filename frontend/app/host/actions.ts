@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { backendUrl } from "@/lib/backend";
 import { importCourse, type ImportOutcome } from "@/lib/courses";
+import { textField } from "@/lib/form-data";
 import { closeMasterclass, createMasterclass, openMasterclass } from "@/lib/masterclasses";
 import { HOST_COOKIE, HOST_LOGIN_PATH } from "@/lib/host-cookie";
 import { readHostCookie } from "@/lib/host-session";
@@ -14,7 +15,7 @@ export type LoginState = { error?: string };
 const BACKEND_TIMEOUT_MS = 10000; // Hashing the password takes a moment on purpose.
 
 export async function login(_previous: LoginState, formData: FormData): Promise<LoginState> {
-  const password = String(formData.get("password") ?? "");
+  const password = textField(formData, "password");
 
   let response: Response;
   try {
@@ -85,7 +86,7 @@ export async function createMasterclassAction(
   formData: FormData,
 ): Promise<CreateMasterclassState> {
   const courseId = Number(formData.get("courseId"));
-  const name = String(formData.get("name") ?? "");
+  const name = textField(formData, "name");
 
   try {
     const result = await createMasterclass(courseId, name);

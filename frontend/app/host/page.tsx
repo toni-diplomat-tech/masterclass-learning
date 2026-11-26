@@ -84,7 +84,7 @@ function Masterclasses({ masterclasses }: { masterclasses: MasterclassOverview[]
           <th scope="col">Status</th>
           <th scope="col">Join code</th>
           <th scope="col">Participants</th>
-          <th scope="col"></th>
+          <th scope="col">Links</th>
         </tr>
       </thead>
       <tbody>
