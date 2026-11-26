@@ -36,38 +36,18 @@ public static class MasterclassEndpoints
                 ? Results.Ok(masterclass)
                 : Results.NotFound());
 
+        // Straight to the Quiz engine, not through LiveMasterclass: a Draft isn't live yet, so nobody is
+        // listening for it to open (the Host's own page refreshes), and a refused open changes nothing.
         host.MapPost("/masterclasses/{id:int}/open", async (int id, QuizEngine engine, CancellationToken cancellationToken) =>
         {
             var result = await engine.OpenMasterclassAsync(id, cancellationToken);
-            if (result.Masterclass is null)
-            {
-                return Results.NotFound();
-            }
-            if (!result.Succeeded)
-            {
-                return Results.Problem(
-                    title: "The Masterclass was not opened.",
-                    statusCode: StatusCodes.Status409Conflict,
-                    extensions: new Dictionary<string, object?> { ["problems"] = result.Problems });
-            }
-            return Results.Ok(result.Masterclass);
+            return Answer(result.Masterclass, result.Succeeded, result.Problems, "The Masterclass was not opened.");
         });
 
         host.MapPost("/masterclasses/{id:int}/close", async (int id, LiveMasterclass live, CancellationToken cancellationToken) =>
         {
             var result = await live.CloseMasterclassAsync(id, cancellationToken);
-            if (result.Masterclass is null)
-            {
-                return Results.NotFound();
-            }
-            if (!result.Succeeded)
-            {
-                return Results.Problem(
-                    title: "The Masterclass was not closed.",
-                    statusCode: StatusCodes.Status409Conflict,
-                    extensions: new Dictionary<string, object?> { ["problems"] = result.Problems });
-            }
-            return Results.Ok(result.Masterclass);
+            return Answer(result.Masterclass, result.Succeeded, result.Problems, "The Masterclass was not closed.");
         });
 
         host.MapGet("/masterclasses/{id:int}/leaderboard", async (int id, QuizEngine engine, CancellationToken cancellationToken) =>
@@ -76,6 +56,22 @@ public static class MasterclassEndpoints
                 : Results.NotFound());
 
         return host;
+    }
+
+    // A change to one Masterclass: 404 when there is none, 409 with its problems when it was refused,
+    // otherwise 200 with the Masterclass as it now is.
+    private static IResult Answer(MasterclassOverview? masterclass, bool succeeded, IReadOnlyList<string> problems, string refusedTitle)
+    {
+        if (masterclass is null)
+        {
+            return Results.NotFound();
+        }
+        return succeeded
+            ? Results.Ok(masterclass)
+            : Results.Problem(
+                title: refusedTitle,
+                statusCode: StatusCodes.Status409Conflict,
+                extensions: new Dictionary<string, object?> { ["problems"] = problems });
     }
 
     private sealed record CreateRequest(int? CourseId, string? Name);
