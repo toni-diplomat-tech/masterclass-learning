@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
-using System.Threading.Channels;
 using MasterclassQuiz.Api.HostAuth;
 using MasterclassQuiz.Api.Participants;
 using MasterclassQuiz.Api.Quiz;
@@ -14,18 +13,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MasterclassQuiz.Tests;
 
 /// <summary>
-/// Nothing is lost when a phone or the projector reloads (GetCurrentState on every connect), and the
-/// projector's Resume button makes the backend follow a Session nobody was moving on.
+/// What the hub owns for recovery: GetCurrentState answers the Host and the Masterclass's Participants
+/// (known by the participant cookie) and nobody else, and only the Host can resume. What resuming does is
+/// covered by the live Masterclass module tests (LiveMasterclassResumeTests).
 /// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
 {
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
-
     private readonly WebApplicationFactory<Program> _app = new BackendFactory(sqlServer, HostPassword.Hash(HostClient.Password))
         .WithWebHostBuilder(builder => builder
-            .UseSetting("Quiz:TimeLimitSeconds:Easy", "30")
-            .UseSetting("Quiz:RevealPauseSeconds", "0.3"));
+            .UseSetting("Quiz:TimeLimitSeconds:Easy", "30"));
 
     private QuizEngine Engine => _app.Services.GetRequiredService<QuizEngine>();
 
@@ -76,50 +73,6 @@ public sealed class RecoveryHubTests(SqlServerFixture sqlServer) : IDisposable
         Assert.Null(await stranger.InvokeAsync<JsonObject?>("GetCurrentState", meeting.MasterclassId));
         Assert.Null(await otherPhone.InvokeAsync<JsonObject?>("GetCurrentState", meeting.MasterclassId));
         await Assert.ThrowsAsync<HubException>(() => phone.InvokeAsync<JsonObject>("ResumeSession", meeting.MasterclassId));
-    }
-
-    [Fact]
-    public async Task Resume_moves_on_a_session_that_nobody_was_following()
-    {
-        // Started straight through the engine, with a 1 s limit: no backend timer follows this Session.
-        var engine = new QuizEngine(sqlServer.Connection, TimeProvider.System, settings: new QuizSettings { TimeLimitSeconds = new TimeLimitSeconds { Easy = 1 } });
-        var meeting = await RunningSessionFixture.StartAsync(engine, participants: 1, easy: 2);
-        await Task.Delay(TimeSpan.FromSeconds(1.6)); // past the deadline and grace
-        await using var phone = await ConnectedAsync($"{ParticipantEndpoints.CookieName}={meeting.Tokens[0]}");
-        var onPhone = Listen(phone, "QuestionRevealed");
-        await using var projector = await ConnectedAsync(await HostCookieAsync());
-        var onProjector = Listen(projector, "QuestionRevealed");
-        Assert.Equal("Question", (string?)(await phone.InvokeAsync<JsonObject>("GetCurrentState", meeting.MasterclassId))["step"]);
-        await projector.InvokeAsync<JsonObject>("GetCurrentState", meeting.MasterclassId);
-
-        var resumed = await projector.InvokeAsync<JsonObject>("ResumeSession", meeting.MasterclassId);
-
-        Assert.Equal(meeting.MasterclassId, (int)resumed["masterclassId"]!);
-        foreach (var revealed in new[] { await NextAsync(onProjector), await NextAsync(onPhone) })
-        {
-            Assert.Equal((meeting.Question.QuestionId, 0, 1), ((int)revealed["questionId"]!, (int)revealed["answered"]!, (int)revealed["timedOut"]!));
-        }
-    }
-
-    private static async Task<JsonObject> NextAsync(ChannelReader<JsonObject> messages)
-    {
-        using var timeout = new CancellationTokenSource(Timeout);
-        return await messages.ReadAsync(timeout.Token);
-    }
-
-    private static ChannelReader<JsonObject> Listen(HubConnection connection, string name)
-    {
-        var messages = Channel.CreateUnbounded<JsonObject>();
-        connection.On<JsonObject>(name, message => messages.Writer.TryWrite(message));
-        return messages.Reader;
-    }
-
-    private async Task<string> JoinAsync(string joinCode)
-    {
-        var client = _app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-        var join = await client.PostAsJsonAsync("/api/participants/join", new { joinCode });
-        join.EnsureSuccessStatusCode();
-        return join.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith(ParticipantEndpoints.CookieName + "=")).Split(';')[0];
     }
 
     private async Task<string> HostCookieAsync()

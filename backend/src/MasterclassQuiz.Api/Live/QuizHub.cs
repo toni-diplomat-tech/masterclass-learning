@@ -6,8 +6,12 @@ using Microsoft.AspNetCore.SignalR;
 namespace MasterclassQuiz.Api.Live;
 
 /// <summary>
-/// The live meeting, at <see cref="Path"/>. Each Masterclass has one group (<see cref="MasterclassGroup"/>)
-/// that its broadcasts go to. Like the REST endpoints, the hub is a thin caller of the Quiz engine.
+/// The live meeting's SignalR transport, at <see cref="Path"/>. The hub translates SignalR calls into calls
+/// on the live Masterclass module (<see cref="LiveMasterclass"/>), which makes every change and sends its
+/// broadcasts; reads that change nothing go straight to the Quiz engine. The hub owns only Host
+/// authorisation, the participant cookie, adding connections to the Masterclass's group
+/// (<see cref="MasterclassGroup"/>) and shaping replies. The message names below are the wire contract;
+/// <see cref="SignalRBroadcasts"/> sends them to the group.
 /// </summary>
 public sealed partial class QuizHub(QuizEngine engine, LiveMasterclass live) : Hub
 {
