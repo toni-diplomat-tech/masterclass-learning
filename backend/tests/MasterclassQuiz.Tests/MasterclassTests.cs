@@ -39,7 +39,7 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
     public async Task Opening_a_masterclass_while_none_is_open_gives_it_a_six_digit_join_code()
     {
         var draft = await CreateMasterclassAsync();
-        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection);
+        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection, new FakeTimeProvider(Now));
 
         var opened = await _engine.OpenMasterclassAsync(draft.Id);
 
@@ -51,7 +51,7 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Opening_the_open_masterclass_again_keeps_its_join_code()
     {
-        var first = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync()).Id);
+        var first = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync()).Id, sqlServer.Connection, new FakeTimeProvider(Now));
 
         var again = await _engine.OpenMasterclassAsync(first.Id);
 
@@ -62,7 +62,7 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_draft_can_not_open_while_another_masterclass_is_open()
     {
-        var open = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync("Dev team 2026")).Id);
+        var open = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync("Dev team 2026")).Id, sqlServer.Connection, new FakeTimeProvider(Now));
         var draft = await CreateMasterclassAsync("QA team 2026");
 
         var refused = await _engine.OpenMasterclassAsync(draft.Id);
@@ -75,7 +75,7 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_draft_opens_once_the_open_masterclass_is_closed()
     {
-        var open = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync("Dev team 2026")).Id);
+        var open = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync("Dev team 2026")).Id, sqlServer.Connection, new FakeTimeProvider(Now));
         var draft = await CreateMasterclassAsync("QA team 2026");
         await _engine.OpenMasterclassAsync(draft.Id);
 
@@ -100,7 +100,7 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
             {
                 drafts.Add((await _engine.CreateMasterclassAsync(course.CourseId, $"Team {i}")).Masterclass!);
             }
-            await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection);
+            await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection, new FakeTimeProvider(Now));
 
             var go = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var openings = drafts.Select(draft => Task.Run(async () =>
@@ -120,7 +120,7 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_closed_masterclass_can_not_open_again()
     {
-        var closed = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync()).Id);
+        var closed = await _engine.OpenAsOnlyOpenMasterclassAsync((await CreateMasterclassAsync()).Id, sqlServer.Connection, new FakeTimeProvider(Now));
         await _engine.CloseMasterclassAsync(closed.Id);
 
         var again = await _engine.OpenMasterclassAsync(closed.Id);

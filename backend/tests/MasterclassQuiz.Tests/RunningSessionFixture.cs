@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using MasterclassQuiz.Api.Database;
 using MasterclassQuiz.Api.Quiz;
 
 namespace MasterclassQuiz.Tests;
@@ -7,12 +8,14 @@ namespace MasterclassQuiz.Tests;
 /// A running Session for engine tests: an Open Masterclass with <c>participants</c> joined, whose
 /// "unit-tests" Workshop Session runs the given mix (in every Question, option 1 is the correct one).
 /// <see cref="ImportFile"/> is the Course's import file, to edit and import again.
+/// <c>database</c> is the engine's and <c>time</c> its clock: opening closes every other Open Masterclass there
+/// (see <see cref="OnlyOpenMasterclass"/>).
 /// </summary>
 public sealed record RunningSessionFixture(int MasterclassId, string JoinCode, int SessionId, IReadOnlyList<string> Tokens, IReadOnlyList<SessionQuestion> Questions, QuestionStarted Question, JsonObject ImportFile)
 {
-    public static async Task<RunningSessionFixture> StartAsync(QuizEngine engine, int participants, int easy, int medium = 0, int hard = 0)
+    public static async Task<RunningSessionFixture> StartAsync(QuizEngine engine, DatabaseConnection database, TimeProvider time, int participants, int easy, int medium = 0, int hard = 0)
     {
-        var ready = await ReadySessionFixture.PrepareAsync(engine, participants, easy, medium, hard);
+        var ready = await ReadySessionFixture.PrepareAsync(engine, database, time, participants, easy, medium, hard);
         var started = await engine.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix);
         Assert.Empty(started.Problems);
         return new RunningSessionFixture(ready.MasterclassId, ready.JoinCode, started.Session!.Id, ready.Tokens, started.Session.Questions, started.Session.FirstQuestion, ready.ImportFile);
@@ -25,7 +28,7 @@ public sealed record RunningSessionFixture(int MasterclassId, string JoinCode, i
 /// </summary>
 public sealed record ReadySessionFixture(int MasterclassId, string JoinCode, int WorkshopId, DifficultyCounts Mix, IReadOnlyList<string> Tokens, JsonObject ImportFile)
 {
-    public static async Task<ReadySessionFixture> PrepareAsync(QuizEngine engine, int participants, int easy, int medium = 0, int hard = 0)
+    public static async Task<ReadySessionFixture> PrepareAsync(QuizEngine engine, DatabaseConnection database, TimeProvider time, int participants, int easy, int medium = 0, int hard = 0)
     {
         var file = SessionFiles.WithWorkshopQuestions(easy, medium, hard);
         var import = await engine.ImportCourseAsync(file.ToJsonString());
@@ -34,7 +37,7 @@ public sealed record ReadySessionFixture(int MasterclassId, string JoinCode, int
             .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
         var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        var opened = await engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id);
+        var opened = await engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id, database, time);
 
         var tokens = new List<string>();
         for (var i = 0; i < participants; i++)

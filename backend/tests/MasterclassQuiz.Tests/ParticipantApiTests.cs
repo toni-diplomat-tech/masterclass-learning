@@ -14,7 +14,7 @@ public sealed class ParticipantApiTests(SqlServerFixture sqlServer) : IDisposabl
     [Fact]
     public async Task Joining_sets_an_http_only_cookie_and_answers_with_the_nickname()
     {
-        var (id, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app));
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app), sqlServer.Connection);
         var phone = _app.CreateClient();
 
         var join = await phone.PostAsJsonAsync("/api/participants/join", new { joinCode });
@@ -33,7 +33,7 @@ public sealed class ParticipantApiTests(SqlServerFixture sqlServer) : IDisposabl
     [Fact]
     public async Task The_cookie_brings_back_the_same_participant()
     {
-        var (_, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app));
+        var (_, joinCode) = await HostClient.OpenMasterclassAsync(await HostClient.LoggedInAsync(_app), sqlServer.Connection);
         var phone = _app.CreateClient();
         var joined = await (await phone.PostAsJsonAsync("/api/participants/join", new { joinCode })).Content.ReadFromJsonAsync<JsonObject>();
 

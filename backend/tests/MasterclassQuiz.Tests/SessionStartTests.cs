@@ -197,7 +197,7 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
             .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
         var created = await _engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        await _engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id);
+        await _engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id, sqlServer.Connection, new FakeTimeProvider(Now));
         return new Meeting(created.Masterclass.Id, workshopId, import.Outcome.CourseSlug);
     }
 

@@ -42,7 +42,7 @@ public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDi
     [Fact]
     public async Task An_answer_from_an_unknown_participant_broadcasts_nothing()
     {
-        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 2);
 
         var result = await _live.Live.SubmitAnswerAsync("nobody", session.Question.QuestionId, 1);
 
@@ -53,7 +53,7 @@ public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDi
     [Fact]
     public async Task An_answer_to_a_question_that_is_not_running_broadcasts_nothing()
     {
-        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 2);
         var notStartedYet = session.Questions[1].QuestionId;
 
         var result = await _live.Live.SubmitAnswerAsync(session.Tokens[0], notStartedYet, 1);
@@ -102,7 +102,7 @@ public sealed class LiveMasterclassAnswerTests(SqlServerFixture sqlServer) : IDi
     // first QuestionStarted broadcast.
     private async Task<(QuestionStarted Question, IReadOnlyList<string> Tokens)> StartAsync(int participants)
     {
-        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, participants, easy: 2);
+        var ready = await ReadySessionFixture.PrepareAsync(_live.Engine, _live.Database, _live.Time, participants, easy: 2);
         Assert.Empty(await _live.Live.StartSessionAsync(ready.MasterclassId, ready.WorkshopId, ready.Mix));
         return (await _live.Broadcasts.NextAsync<QuestionStarted>(QuizHub.QuestionStarted), ready.Tokens);
     }

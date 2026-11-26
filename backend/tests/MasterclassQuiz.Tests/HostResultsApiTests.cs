@@ -16,7 +16,7 @@ public sealed class HostResultsApiTests(SqlServerFixture sqlServer) : IDisposabl
     public async Task The_host_reads_the_results_with_each_participants_recap_token()
     {
         var host = await HostClient.LoggedInAsync(_app);
-        var (id, joinCode) = await HostClient.OpenMasterclassAsync(host);
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(host, sqlServer.Connection);
         var phone = _app.CreateClient();
         var joined = await (await phone.PostAsJsonAsync("/api/participants/join", new { joinCode })).Content.ReadFromJsonAsync<JsonObject>();
         var recapToken = (string?)(await phone.GetFromJsonAsync<JsonObject>("/api/participants/me/recap"))!["recapToken"];

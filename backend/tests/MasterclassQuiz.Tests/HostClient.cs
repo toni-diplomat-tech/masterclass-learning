@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
+using MasterclassQuiz.Api.Database;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace MasterclassQuiz.Tests;
@@ -38,14 +39,23 @@ public static class HostClient
     }
 
     /// <summary>
-    /// Creates and opens a Masterclass, after closing every other Open one on the shared test database
-    /// (see <see cref="OnlyOpenMasterclass"/>); returns its id and Join code.
+    /// POSTs <c>/open</c> for a Masterclass after closing every other Open one in <paramref name="database"/>
+    /// (see <see cref="OnlyOpenMasterclass"/>), at the system clock's now, which the backend under test runs on.
     /// </summary>
-    public static async Task<(int Id, string JoinCode)> OpenMasterclassAsync(HttpClient host)
+    public static async Task<HttpResponseMessage> OpenAsOnlyOpenMasterclassAsync(HttpClient host, int masterclassId, DatabaseConnection database)
+    {
+        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(database, TimeProvider.System);
+        return await host.PostAsync($"/api/host/masterclasses/{masterclassId}/open", null);
+    }
+
+    /// <summary>
+    /// Creates and opens a Masterclass, after closing every other Open one in <paramref name="database"/>;
+    /// returns its id and Join code.
+    /// </summary>
+    public static async Task<(int Id, string JoinCode)> OpenMasterclassAsync(HttpClient host, DatabaseConnection database)
     {
         var id = await CreateMasterclassAsync(host);
-        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(SqlServerFixture.Shared);
-        var open = await host.PostAsync($"/api/host/masterclasses/{id}/open", null);
+        var open = await OpenAsOnlyOpenMasterclassAsync(host, id, database);
         open.EnsureSuccessStatusCode();
         return (id, (string)(await open.Content.ReadFromJsonAsync<JsonObject>())!["joinCode"]!);
     }

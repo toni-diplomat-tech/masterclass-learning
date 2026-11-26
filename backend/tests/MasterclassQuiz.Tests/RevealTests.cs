@@ -20,7 +20,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_question_is_not_revealed_while_answers_still_count()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromMilliseconds(3_499));
 
@@ -31,7 +31,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_reveal_shows_the_correct_option_and_how_many_chose_each_option()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 5, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 5, easy: 1);
         var questionId = session.Question.QuestionId;
         await Engine.SubmitAnswerAsync(session.Tokens[0], questionId, 1);
         await Engine.SubmitAnswerAsync(session.Tokens[1], questionId, 2);
@@ -57,7 +57,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_re_import_while_a_question_runs_changes_neither_its_options_nor_its_correct_option()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 2, easy: 1);
         var questionId = session.Question.QuestionId;
         await Engine.SubmitAnswerAsync(session.Tokens[0], questionId, 1);
         session.ImportFile.Question("easy-1")["options"] = new JsonArray(
@@ -82,7 +82,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_question_is_revealed_early_once_every_participant_has_answered()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 2, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         _time.Advance(TimeSpan.FromSeconds(1));
         Assert.Null(await Engine.RevealQuestionAsync(session.SessionId));
@@ -99,7 +99,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Without_participants_a_question_runs_until_its_deadline()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 0, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 0, easy: 1);
 
         Assert.Null(await Engine.RevealQuestionAsync(session.SessionId));
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
@@ -109,7 +109,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_question_is_revealed_once()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 2);
         _time.Advance(TimeSpan.FromSeconds(4));
         await Engine.RevealQuestionAsync(session.SessionId);
 
@@ -120,7 +120,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_late_reveal_does_not_let_late_answers_in()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
         _time.Advance(TimeSpan.FromSeconds(10)); // the timer is late
 
         var submitted = await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
@@ -133,7 +133,7 @@ public sealed class RevealTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Participants_who_joined_after_a_question_started_are_not_timed_out_for_it()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 2, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 2, easy: 2);
         _time.Advance(TimeSpan.FromSeconds(1));
         var late = (await Engine.JoinMasterclassAsync(session.JoinCode, null))!.Token;
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);

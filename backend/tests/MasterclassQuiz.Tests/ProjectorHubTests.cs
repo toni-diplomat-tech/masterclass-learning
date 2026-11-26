@@ -20,7 +20,7 @@ public sealed class ProjectorHubTests(SqlServerFixture sqlServer) : IDisposable
     public async Task The_projector_sees_the_participant_count_go_up_as_people_join()
     {
         var (host, hostCookie) = await LoggedInHostAsync();
-        var (id, joinCode) = await HostClient.OpenMasterclassAsync(host);
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(host, sqlServer.Connection);
         await using var projector = Connect(hostCookie);
         var counts = Channel.CreateUnbounded<JsonObject>();
         projector.On<JsonObject>("ParticipantCountUpdated", update => counts.Writer.TryWrite(update));

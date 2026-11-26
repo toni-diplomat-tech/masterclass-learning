@@ -20,7 +20,7 @@ public sealed class MasterclassCloseHubTests(SqlServerFixture sqlServer) : IDisp
     public async Task Phones_hear_that_the_host_closed_the_masterclass()
     {
         var host = await HostClient.LoggedInAsync(_app);
-        var (id, joinCode) = await HostClient.OpenMasterclassAsync(host);
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(host, sqlServer.Connection);
         await using var phone = Connect(await JoinAsync(joinCode));
         var closed = Channel.CreateUnbounded<JsonObject>();
         phone.On<JsonObject>("MasterclassClosed", message => closed.Writer.TryWrite(message));

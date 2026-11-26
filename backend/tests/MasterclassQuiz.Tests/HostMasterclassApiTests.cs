@@ -46,9 +46,8 @@ public sealed class HostMasterclassApiTests(SqlServerFixture sqlServer) : IDispo
     {
         var client = await HostClient.LoggedInAsync(_app);
         var id = await HostClient.CreateMasterclassAsync(client);
-        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection);
 
-        var open = await client.PostAsync($"/api/host/masterclasses/{id}/open", null);
+        var open = await HostClient.OpenAsOnlyOpenMasterclassAsync(client, id, sqlServer.Connection);
         var masterclass = await client.GetFromJsonAsync<JsonObject>($"/api/host/masterclasses/{id}");
 
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
@@ -60,7 +59,7 @@ public sealed class HostMasterclassApiTests(SqlServerFixture sqlServer) : IDispo
     public async Task The_host_closes_a_masterclass_and_its_join_code_stops_working()
     {
         var client = await HostClient.LoggedInAsync(_app);
-        var (id, joinCode) = await HostClient.OpenMasterclassAsync(client);
+        var (id, joinCode) = await HostClient.OpenMasterclassAsync(client, sqlServer.Connection);
 
         var close = await client.PostAsync($"/api/host/masterclasses/{id}/close", null);
         var join = await _app.CreateClient().PostAsJsonAsync("/api/participants/join", new { joinCode });
@@ -87,7 +86,7 @@ public sealed class HostMasterclassApiTests(SqlServerFixture sqlServer) : IDispo
     public async Task Opening_a_masterclass_while_another_is_open_is_answered_with_the_one_to_close()
     {
         var client = await HostClient.LoggedInAsync(_app);
-        await HostClient.OpenMasterclassAsync(client);
+        await HostClient.OpenMasterclassAsync(client, sqlServer.Connection);
         var courseId = await HostClient.ImportCourseAsync(client);
         var create = await client.PostAsJsonAsync("/api/host/masterclasses", new { courseId, name = "QA team 2026" });
         var id = (int)(await create.Content.ReadFromJsonAsync<JsonObject>())!["id"]!;
@@ -105,7 +104,7 @@ public sealed class HostMasterclassApiTests(SqlServerFixture sqlServer) : IDispo
     public async Task The_host_gets_the_masterclass_leaderboard()
     {
         var client = await HostClient.LoggedInAsync(_app);
-        var (id, _) = await HostClient.OpenMasterclassAsync(client);
+        var (id, _) = await HostClient.OpenMasterclassAsync(client, sqlServer.Connection);
 
         var leaderboard = await client.GetFromJsonAsync<JsonObject>($"/api/host/masterclasses/{id}/leaderboard");
 

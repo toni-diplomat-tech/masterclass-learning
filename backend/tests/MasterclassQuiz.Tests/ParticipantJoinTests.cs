@@ -125,6 +125,6 @@ public sealed class ParticipantJoinTests(SqlServerFixture sqlServer)
     {
         var course = (await _engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString())).Outcome!;
         var draft = (await _engine.CreateMasterclassAsync(course.CourseId, "Dev team 2026")).Masterclass!;
-        return await _engine.OpenAsOnlyOpenMasterclassAsync(draft.Id);
+        return await _engine.OpenAsOnlyOpenMasterclassAsync(draft.Id, sqlServer.Connection, new FakeTimeProvider(Now));
     }
 }

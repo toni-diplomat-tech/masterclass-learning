@@ -25,7 +25,7 @@ public sealed class LiveMasterclassCloseTests(SqlServerFixture sqlServer) : IDis
     [Fact]
     public async Task A_refused_close_broadcasts_nothing()
     {
-        var session = await RunningSessionFixture.StartAsync(_live.Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(_live.Engine, _live.Database, _live.Time, participants: 1, easy: 1);
 
         var closed = await _live.Live.CloseMasterclassAsync(session.MasterclassId);
 

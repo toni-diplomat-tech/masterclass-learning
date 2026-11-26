@@ -16,17 +16,10 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public DatabaseConnection Connection { get; private set; } = null!;
 
-    /// <summary>
-    /// <see cref="Connection"/> of the run's one fixture, for helpers that only get a Quiz engine
-    /// (see <see cref="OnlyOpenMasterclass"/>).
-    /// </summary>
-    public static DatabaseConnection Shared { get; private set; } = null!;
-
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
         Connection = ConnectionFor("MasterclassQuiz");
-        Shared = Connection;
         DatabaseMigrator.Migrate(Connection, DatabaseMigrator.DefaultScriptsDirectory);
     }
 

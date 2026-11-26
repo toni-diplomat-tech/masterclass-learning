@@ -142,8 +142,7 @@ public sealed class SessionHubTests(SqlServerFixture sqlServer) : IDisposable
 
         var create = await host.PostAsJsonAsync("/api/host/masterclasses", new { courseId, name = "Dev team 2026" });
         var masterclassId = (int)(await create.Content.ReadFromJsonAsync<JsonObject>())!["id"]!;
-        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection);
-        var open = await host.PostAsync($"/api/host/masterclasses/{masterclassId}/open", null);
+        var open = await HostClient.OpenAsOnlyOpenMasterclassAsync(host, masterclassId, sqlServer.Connection);
         var joinCode = (string)(await open.Content.ReadFromJsonAsync<JsonObject>())!["joinCode"]!;
         return (masterclassId, joinCode, workshopId);
     }

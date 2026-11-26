@@ -23,7 +23,7 @@ public sealed class RestartRecoveryTests(SqlServerFixture sqlServer)
         {
             TimeLimitSeconds = new TimeLimitSeconds { Easy = 1 },
         });
-        var session = await RunningSessionFixture.StartAsync(engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(engine, sqlServer.Connection, TimeProvider.System, participants: 1, easy: 2);
         await Task.Delay(TimeSpan.FromSeconds(1.6)); // past the first Question's deadline and grace
 
         using var restarted = new BackendFactory(sqlServer, HostPassword.Hash(HostClient.Password))

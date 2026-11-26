@@ -20,7 +20,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_next_question_starts_after_the_configured_reveal_pause()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 2);
         _time.Advance(TimeSpan.FromMilliseconds(3_500));
         await Engine.RevealQuestionAsync(session.SessionId);
 
@@ -39,7 +39,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_running_question_is_not_skipped()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 2);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 2);
         _time.Advance(TimeSpan.FromMinutes(1));
 
         Assert.Equal(new SessionAdvance(null, null), await Engine.AdvanceSessionAsync(session.SessionId));
@@ -49,7 +49,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_session_ends_on_its_own_after_the_pause_following_its_last_reveal()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
         await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
         var revealed = await Engine.RevealQuestionAsync(session.SessionId);
         _time.Advance(TimeSpan.FromSeconds(2));
@@ -65,7 +65,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task Once_a_session_ended_the_masterclass_can_run_another_one()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 0, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 0, easy: 1);
         var masterclass = (await Engine.GetMasterclassAsync(session.MasterclassId))!;
         var otherWorkshopId = (await Engine.ListCoursesAsync())
             .Single(c => c.Id == masterclass.CourseId).Workshops
@@ -83,7 +83,7 @@ public sealed class SessionAdvanceTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task The_progress_says_what_the_session_waits_for_and_until_when()
     {
-        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, sqlServer.Connection, _time, participants: 1, easy: 1);
         var running = await Engine.GetSessionProgressAsync(session.SessionId);
         _time.Advance(TimeSpan.FromSeconds(4));
         await Engine.RevealQuestionAsync(session.SessionId);
