@@ -7,7 +7,8 @@ namespace MasterclassQuiz.Api.Database;
 /// <summary>
 /// Brings a database up to date with the SQL scripts in the repo's /database folder:
 /// numbered scripts in <c>migrations</c> run once each, in order, and are journaled;
-/// <c>CREATE OR ALTER</c> scripts in <c>procedures</c> run again on every call.
+/// <c>CREATE OR ALTER</c> scripts in <c>functions</c>, then in <c>procedures</c>, run again on every call,
+/// so a procedure can use any function.
 /// </summary>
 public static class DatabaseMigrator
 {
@@ -18,10 +19,12 @@ public static class DatabaseMigrator
         EnsureDatabase.For.SqlDatabase(database.ConnectionString);
 
         var migrations = Run(database, ScriptsIn(scriptsDirectory, "migrations"), journaled: true);
+        var functions = Run(database, ScriptsIn(scriptsDirectory, "functions"), journaled: false);
         var procedures = Run(database, ScriptsIn(scriptsDirectory, "procedures"), journaled: false);
 
         return new MigrationReport(
             migrations.Scripts.Select(s => s.Name).ToList(),
+            functions.Scripts.Select(s => s.Name).ToList(),
             procedures.Scripts.Select(s => s.Name).ToList());
     }
 
@@ -58,4 +61,7 @@ public static class DatabaseMigrator
 }
 
 /// <summary>The script names one <see cref="DatabaseMigrator.Migrate"/> call ran, in run order.</summary>
-public sealed record MigrationReport(IReadOnlyList<string> MigrationsApplied, IReadOnlyList<string> ProceduresApplied);
+public sealed record MigrationReport(
+    IReadOnlyList<string> MigrationsApplied,
+    IReadOnlyList<string> FunctionsApplied,
+    IReadOnlyList<string> ProceduresApplied);
