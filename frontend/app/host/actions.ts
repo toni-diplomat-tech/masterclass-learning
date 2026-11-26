@@ -114,8 +114,20 @@ export async function closeMasterclassAction(masterclassId: number): Promise<Clo
   }
 }
 
-/** Opens a Draft Masterclass from its projector view, which then shows the Join code. */
-export async function openMasterclassAction(masterclassId: number): Promise<void> {
-  await openMasterclass(masterclassId);
-  refresh();
+export type OpenMasterclassState = { problems?: string[]; error?: string };
+
+/**
+ * Opens a Draft Masterclass from its projector view, which then shows the Join code. Refused (with
+ * problems) while another Masterclass is Open, naming the one to close first.
+ */
+export async function openMasterclassAction(masterclassId: number): Promise<OpenMasterclassState> {
+  try {
+    const { problems } = await openMasterclass(masterclassId);
+    if (problems.length > 0) return { problems };
+    refresh();
+    return {};
+  } catch (error) {
+    unstable_rethrow(error); // hostFetch redirects to the login page when the session has ended.
+    return { error: "Opening the Masterclass failed. Try again." };
+  }
 }

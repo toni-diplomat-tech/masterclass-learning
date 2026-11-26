@@ -77,8 +77,16 @@ export async function getMasterclassLeaderboard(id: number): Promise<Masterclass
   return response.json();
 }
 
-/** Opens a Draft Masterclass, which gives it its Join code. */
-export async function openMasterclass(id: number): Promise<void> {
+/**
+ * Opens a Draft Masterclass, which gives it its Join code. Only one Masterclass can be Open at a time, so
+ * it is refused (with problems, e.g. which Masterclass to close first) while another one is Open.
+ */
+export async function openMasterclass(id: number): Promise<{ problems: string[] }> {
   const response = await hostFetch(`/api/host/masterclasses/${id}/open`, { method: "POST" });
-  if (!response.ok) throw new Error(`Opening the Masterclass failed: HTTP ${response.status}`);
+  if (response.ok) return { problems: [] };
+  if (response.status === 409) {
+    const problem: { problems?: string[] } = await response.json();
+    if (problem.problems?.length) return { problems: problem.problems };
+  }
+  throw new Error(`Opening the Masterclass failed: HTTP ${response.status}`);
 }
