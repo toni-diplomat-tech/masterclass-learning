@@ -37,10 +37,14 @@ public static class HostClient
         return (int)(await create.Content.ReadFromJsonAsync<JsonObject>())!["id"]!;
     }
 
-    /// <summary>Creates and opens a Masterclass; returns its id and Join code.</summary>
+    /// <summary>
+    /// Creates and opens a Masterclass, after closing every other Open one on the shared test database
+    /// (see <see cref="OnlyOpenMasterclass"/>); returns its id and Join code.
+    /// </summary>
     public static async Task<(int Id, string JoinCode)> OpenMasterclassAsync(HttpClient host)
     {
         var id = await CreateMasterclassAsync(host);
+        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(SqlServerFixture.Shared);
         var open = await host.PostAsync($"/api/host/masterclasses/{id}/open", null);
         open.EnsureSuccessStatusCode();
         return (id, (string)(await open.Content.ReadFromJsonAsync<JsonObject>())!["joinCode"]!);

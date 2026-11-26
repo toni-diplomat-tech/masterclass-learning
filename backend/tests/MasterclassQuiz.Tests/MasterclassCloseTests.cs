@@ -145,6 +145,6 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
         var engine = new QuizEngine(sqlServer.Connection, _time, random);
         var import = await engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
         var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        return (await engine.OpenMasterclassAsync(created.Masterclass!.Id))!;
+        return await engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id);
     }
 }

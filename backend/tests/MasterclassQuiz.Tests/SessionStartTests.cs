@@ -163,8 +163,8 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_session_is_for_a_workshop_of_the_masterclass_course()
     {
-        var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
         var otherCourse = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
+        var meeting = await OpenMeetingAsync(easy: 4, medium: 0, hard: 0);
 
         var started = await _engine.StartSessionAsync(meeting.MasterclassId, otherCourse.WorkshopId, new DifficultyCounts(1, 0, 0));
 
@@ -197,7 +197,7 @@ public sealed class SessionStartTests(SqlServerFixture sqlServer)
             .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
         var created = await _engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        await _engine.OpenMasterclassAsync(created.Masterclass!.Id);
+        await _engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id);
         return new Meeting(created.Masterclass.Id, workshopId, import.Outcome.CourseSlug);
     }
 

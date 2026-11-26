@@ -34,7 +34,7 @@ public sealed record ReadySessionFixture(int MasterclassId, string JoinCode, int
             .Single(c => c.Id == import.Outcome!.CourseId).Workshops
             .Single(w => w.Slug == SessionFiles.WorkshopSlug).Id;
         var created = await engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        var opened = await engine.OpenMasterclassAsync(created.Masterclass!.Id);
+        var opened = await engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id);
 
         var tokens = new List<string>();
         for (var i = 0; i < participants; i++)

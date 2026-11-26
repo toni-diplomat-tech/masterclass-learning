@@ -39,7 +39,7 @@ A Masterclass the Host has created but not yet opened; it has no Join code, so n
 _Avoid_: Draft (alone), New, Pending
 
 **Masterclass Open**:
-A Masterclass that has a Join code, so Participants can join and its Sessions can run.
+A Masterclass that has a Join code, so Participants can join and its Sessions can run. Only one Masterclass is Masterclass Open at a time across the whole app: it must be Masterclass Closed before the next one opens.
 _Avoid_: Open (alone), Active, Live, Started
 
 **Masterclass Closed**:

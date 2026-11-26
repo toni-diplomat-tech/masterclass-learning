@@ -37,14 +37,21 @@ public static class MasterclassEndpoints
                 : Results.NotFound());
 
         host.MapPost("/masterclasses/{id:int}/open", async (int id, QuizEngine engine, CancellationToken cancellationToken) =>
-            await engine.OpenMasterclassAsync(id, cancellationToken) switch
+        {
+            var result = await engine.OpenMasterclassAsync(id, cancellationToken);
+            if (result.Masterclass is null)
             {
-                null => Results.NotFound(),
-                { Status: MasterclassStatus.Open } masterclass => Results.Ok(masterclass),
-                _ => Results.Problem(
-                    title: "A Closed Masterclass can't be opened again.",
-                    statusCode: StatusCodes.Status409Conflict),
-            });
+                return Results.NotFound();
+            }
+            if (!result.Succeeded)
+            {
+                return Results.Problem(
+                    title: "The Masterclass was not opened.",
+                    statusCode: StatusCodes.Status409Conflict,
+                    extensions: new Dictionary<string, object?> { ["problems"] = result.Problems });
+            }
+            return Results.Ok(result.Masterclass);
+        });
 
         host.MapPost("/masterclasses/{id:int}/close", async (int id, LiveMasterclass live, CancellationToken cancellationToken) =>
         {

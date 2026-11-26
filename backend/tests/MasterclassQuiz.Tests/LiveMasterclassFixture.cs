@@ -62,7 +62,7 @@ public sealed class LiveMasterclassFixture : IDisposable
         var import = await Engine.ImportCourseAsync(ImportFiles.Example(ImportFiles.UniqueSlug()).ToJsonString());
         Assert.Empty(import.Problems);
         var created = await Engine.CreateMasterclassAsync(import.Outcome!.CourseId, "Dev team 2026");
-        return (await Engine.OpenMasterclassAsync(created.Masterclass!.Id))!;
+        return await Engine.OpenAsOnlyOpenMasterclassAsync(created.Masterclass!.Id);
     }
 
     public void Dispose() => _lifetime.Stop();
