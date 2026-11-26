@@ -46,6 +46,14 @@ export async function joinMasterclass(joinCode: string): Promise<JoinResult> {
   return { kind: "joined", participant: await response.json(), cookie };
 }
 
+/**
+ * Whether this phone belongs on /play rather than the Join code form: it has joined a Masterclass that
+ * is still Masterclass Open. A Masterclass Closed lets its Participants join another one from `/`.
+ */
+export function belongsOnPlay(participant: Participant | null): boolean {
+  return participant?.masterclassStatus === "Open";
+}
+
 /** The Participant this browser's cookie belongs to, or null if it has none (or an unknown one). */
 export async function currentParticipant(): Promise<Participant | null> {
   const cookie = await participantCookieHeader();
