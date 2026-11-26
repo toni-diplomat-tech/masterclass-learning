@@ -12,62 +12,62 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace MasterclassQuiz.Tests;
 
+/// <summary>
+/// What the hub owns for a Session: Host-only starts, the participant cookie, and one end-to-end smoke test
+/// that a real SignalR client in the Masterclass group hears a short Session under the wire message names.
+/// The Session's behaviour itself is covered by the live Masterclass module tests (LiveMasterclass*Tests).
+/// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class SessionHubTests(SqlServerFixture sqlServer) : IDisposable
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
+    private static readonly string[] Messages = ["QuestionStarted", "AnswerCountUpdated", "QuestionRevealed", "SessionEnded", "LeaderboardUpdated"];
 
-    // An Easy time limit that isn't the default, to see that it comes from configuration.
+    // An Easy time limit that isn't the default, to see that it comes from configuration; a short reveal
+    // pause, the only real wait in the smoke test.
     private readonly WebApplicationFactory<Program> _app = new BackendFactory(sqlServer, HostPassword.Hash(HostClient.Password))
-        .WithWebHostBuilder(builder => builder.UseSetting("Quiz:TimeLimitSeconds:Easy", "4"));
+        .WithWebHostBuilder(builder => builder
+            .UseSetting("Quiz:TimeLimitSeconds:Easy", "4")
+            .UseSetting("Quiz:RevealPauseSeconds", "0.3"));
 
     [Fact]
-    public async Task Starting_a_session_shows_its_first_question_on_the_projector_and_the_phones()
+    public async Task A_short_session_reaches_the_projector_and_the_phone_under_the_wire_message_names()
     {
         var (host, hostCookie) = await LoggedInHostAsync();
         var (masterclassId, joinCode, workshopId) = await OpenMeetingAsync(host);
-        var phoneCookie = await JoinAsync(joinCode);
-
         await using var projector = Connect(hostCookie);
         var onProjector = Listen(projector);
         await projector.StartAsync();
         await projector.InvokeAsync<JsonObject>("WatchMasterclass", masterclassId);
-        await using var phone = Connect(phoneCookie);
+        await using var phone = Connect(await JoinAsync(joinCode));
         var onPhone = Listen(phone);
         await phone.StartAsync();
-        var participant = await phone.InvokeAsync<JsonObject>("WatchAsParticipant");
+        await phone.InvokeAsync<JsonObject>("GetCurrentState", masterclassId);
 
         var reply = await projector.InvokeAsync<JsonObject>("StartSession", masterclassId, workshopId, new { easy = 1, medium = 0, hard = 0 });
-
-        Assert.Equal(masterclassId, (int)participant["masterclassId"]!);
         Assert.Empty(reply["problems"]!.AsArray());
-        foreach (var started in new[] { await onProjector.ReadAsync().AsTask().WaitAsync(Timeout), await onPhone.ReadAsync().AsTask().WaitAsync(Timeout) })
+        var started = await NextAsync(onPhone, "QuestionStarted");
+        Assert.Equal((masterclassId, "Question easy-1?"), ((int)started["masterclassId"]!, (string?)started["text"]));
+        Assert.Equal(TimeSpan.FromSeconds(4), (DateTime)started["deadline"]! - (DateTime)started["startedAt"]!);
+        Assert.EndsWith("Z", (string?)started["deadline"]);
+        Assert.DoesNotContain("correct", started.ToJsonString(), StringComparison.OrdinalIgnoreCase);
+
+        // The only Participant answers, so the Question is revealed at once; the Session ends after the pause.
+        var answer = await phone.InvokeAsync<JsonObject>("SubmitAnswer", (int)started["questionId"]!, 1);
+
+        Assert.Equal("Accepted", (string?)answer["result"]);
+        string[] heard = ["QuestionStarted", "AnswerCountUpdated", "QuestionRevealed", "LeaderboardUpdated", "SessionEnded", "LeaderboardUpdated"];
+        foreach (var (messages, expected) in new[] { (onProjector, heard), (onPhone, heard[1..]) })
         {
-            Assert.Equal((masterclassId, 1, 1, "Easy"), ((int)started["masterclassId"]!, (int)started["number"]!, (int)started["questionCount"]!, (string?)started["difficulty"]));
-            Assert.Equal("Question easy-1?", (string?)started["text"]);
-            Assert.Equal(3, started["options"]!.AsArray().Count);
-            var startedAt = (DateTime)started["startedAt"]!;
-            var deadline = (DateTime)started["deadline"]!;
-            Assert.Equal(TimeSpan.FromSeconds(4), deadline - startedAt);
-            Assert.EndsWith("Z", (string?)started["deadline"]);
-            Assert.DoesNotContain("correct", started.ToJsonString(), StringComparison.OrdinalIgnoreCase);
+            var names = new List<string>();
+            while (names.Count < expected.Length)
+            {
+                var (name, message) = await NextAsync(messages);
+                names.Add(name);
+                Assert.Equal(masterclassId, (int)message["masterclassId"]!);
+            }
+            Assert.Equal(expected, names);
         }
-    }
-
-    [Fact]
-    public async Task A_refused_start_tells_the_host_why_and_shows_nothing()
-    {
-        var (host, hostCookie) = await LoggedInHostAsync();
-        var (masterclassId, _, workshopId) = await OpenMeetingAsync(host);
-        await using var projector = Connect(hostCookie);
-        var onProjector = Listen(projector);
-        await projector.StartAsync();
-        await projector.InvokeAsync<JsonObject>("WatchMasterclass", masterclassId);
-
-        var reply = await projector.InvokeAsync<JsonObject>("StartSession", masterclassId, workshopId, new { easy = 2, medium = 0, hard = 0 });
-
-        Assert.Equal(["The Difficulty mix asks for 2 Questions but the Workshop has only 1."], reply["problems"]!.AsArray().Select(p => (string)p!));
-        Assert.False(onProjector.TryRead(out _));
     }
 
     [Fact]
@@ -91,10 +91,41 @@ public sealed class SessionHubTests(SqlServerFixture sqlServer) : IDisposable
         Assert.Null(await stranger.InvokeAsync<JsonObject?>("WatchAsParticipant"));
     }
 
-    private static ChannelReader<JsonObject> Listen(HubConnection connection)
+    [Fact]
+    public async Task A_browser_without_a_participant_cookie_cannot_answer()
     {
-        var messages = Channel.CreateUnbounded<JsonObject>();
-        connection.On<JsonObject>("QuestionStarted", message => messages.Writer.TryWrite(message));
+        await using var stranger = Connect(cookie: null);
+        await stranger.StartAsync();
+
+        var reply = await stranger.InvokeAsync<JsonObject>("SubmitAnswer", 1, 1);
+
+        Assert.Equal("UnknownParticipant", (string?)reply["result"]);
+    }
+
+    private static async Task<(string Name, JsonObject Message)> NextAsync(ChannelReader<(string, JsonObject)> messages) =>
+        await messages.ReadAsync().AsTask().WaitAsync(Timeout);
+
+    // Skips other messages until the named one arrives.
+    private static async Task<JsonObject> NextAsync(ChannelReader<(string, JsonObject)> messages, string name)
+    {
+        while (true)
+        {
+            var (received, message) = await NextAsync(messages);
+            if (received == name)
+            {
+                return message;
+            }
+        }
+    }
+
+    // Every broadcast the connection hears, by message name, in order.
+    private static ChannelReader<(string, JsonObject)> Listen(HubConnection connection)
+    {
+        var messages = Channel.CreateUnbounded<(string, JsonObject)>();
+        foreach (var name in Messages)
+        {
+            connection.On<JsonObject>(name, message => messages.Writer.TryWrite((name, message)));
+        }
         return messages.Reader;
     }
 

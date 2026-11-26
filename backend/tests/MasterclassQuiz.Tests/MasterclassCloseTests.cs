@@ -46,10 +46,10 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task No_session_starts_in_a_closed_masterclass()
     {
-        var meeting = await RunOneQuestionSessionAsync();
-        await Engine.CloseMasterclassAsync(meeting.MasterclassId);
+        var session = await RunOneQuestionSessionAsync();
+        await Engine.CloseMasterclassAsync(session.MasterclassId);
 
-        var started = await Engine.StartSessionAsync(meeting.MasterclassId, await WorkshopIdAsync(meeting.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
+        var started = await Engine.StartSessionAsync(session.MasterclassId, await WorkshopIdAsync(session.MasterclassId, "test-doubles"), new DifficultyCounts(1, 0, 0));
 
         Assert.Equal(["Sessions can only start in an Open Masterclass."], started.Problems);
     }
@@ -57,15 +57,15 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_recap_stays_readable_after_the_masterclass_is_closed()
     {
-        var meeting = await RunOneQuestionSessionAsync();
-        var recapToken = await Engine.GetRecapTokenAsync(meeting.Tokens[0]);
-        await Engine.CloseMasterclassAsync(meeting.MasterclassId);
+        var session = await RunOneQuestionSessionAsync();
+        var recapToken = await Engine.GetRecapTokenAsync(session.Tokens[0]);
+        await Engine.CloseMasterclassAsync(session.MasterclassId);
 
         var recap = await Engine.GetRecapAsync(recapToken!);
 
         Assert.Equal(MasterclassStatus.Closed, recap!.MasterclassStatus);
         Assert.Equal(RecapOutcome.PerfectScore, Assert.Single(recap.Workshops).Outcome);
-        Assert.Equal(recapToken, await Engine.GetRecapTokenAsync(meeting.Tokens[0]));
+        Assert.Equal(recapToken, await Engine.GetRecapTokenAsync(session.Tokens[0]));
     }
 
     [Fact]
@@ -97,9 +97,9 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     [Fact]
     public async Task A_masterclass_can_not_be_closed_while_a_session_runs()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
 
-        var closed = await Engine.CloseMasterclassAsync(meeting.MasterclassId);
+        var closed = await Engine.CloseMasterclassAsync(session.MasterclassId);
 
         Assert.Equal(["A Session is still running; close the Masterclass once it has ended."], closed.Problems);
         Assert.Equal(MasterclassStatus.Open, closed.Masterclass!.Status);
@@ -127,11 +127,11 @@ public sealed class MasterclassCloseTests(SqlServerFixture sqlServer)
     // A Masterclass whose "unit-tests" Session ran its one Easy Question (answered correctly) and ended.
     private async Task<RunningSessionFixture> RunOneQuestionSessionAsync()
     {
-        var meeting = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
-        await Engine.SubmitAnswerAsync(meeting.Tokens[0], meeting.Question.QuestionId, 1);
-        await Engine.RevealQuestionAsync(meeting.SessionId);
-        Assert.NotNull((await Engine.AdvanceSessionAsync(meeting.SessionId)).Ended);
-        return meeting;
+        var session = await RunningSessionFixture.StartAsync(Engine, participants: 1, easy: 1);
+        await Engine.SubmitAnswerAsync(session.Tokens[0], session.Question.QuestionId, 1);
+        await Engine.RevealQuestionAsync(session.SessionId);
+        Assert.NotNull((await Engine.AdvanceSessionAsync(session.SessionId)).Ended);
+        return session;
     }
 
     private async Task<int> WorkshopIdAsync(int masterclassId, string slug)

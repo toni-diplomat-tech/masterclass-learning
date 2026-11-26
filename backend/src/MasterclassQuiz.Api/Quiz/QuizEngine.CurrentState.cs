@@ -33,7 +33,7 @@ public sealed partial class QuizEngine
     }
 
     /// <summary>
-    /// The Sessions that haven't ended, which the backend timer must follow (e.g. again after a restart);
+    /// The Sessions that haven't ended, which the live Masterclass module's timer must follow (e.g. again after a restart);
     /// only <paramref name="masterclassId"/>'s when given.
     /// </summary>
     public async Task<IReadOnlyList<int>> ListRunningSessionsAsync(int? masterclassId = null, CancellationToken cancellationToken = default)

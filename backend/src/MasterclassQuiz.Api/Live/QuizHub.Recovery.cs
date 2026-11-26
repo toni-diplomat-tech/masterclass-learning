@@ -27,18 +27,14 @@ public sealed partial class QuizHub
     }
 
     /// <summary>
-    /// Host only (the projector's Resume button): makes the backend timer follow the Masterclass's running
-    /// Session again, as it does on startup. An overdue Question is revealed and the Session carries on;
-    /// following a Session that is already followed changes nothing. Returns the state as it is now.
+    /// Host only (the projector's Resume button): resumes the Masterclass's running Session through the
+    /// live Masterclass module, as on startup (an overdue Question is revealed and the Session carries on).
+    /// Returns the state as it is now.
     /// </summary>
     [Authorize]
     public async Task<CurrentState?> ResumeSession(int masterclassId)
     {
-        foreach (var sessionId in await engine.ListRunningSessionsAsync(masterclassId, Context.ConnectionAborted))
-        {
-            runner.Follow(sessionId);
-            runner.Wake(sessionId);
-        }
+        await live.ResumeMasterclassAsync(masterclassId, Context.ConnectionAborted);
         return await engine.GetCurrentStateAsync(masterclassId, null, Context.ConnectionAborted);
     }
 

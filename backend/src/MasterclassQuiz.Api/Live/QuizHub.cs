@@ -6,10 +6,14 @@ using Microsoft.AspNetCore.SignalR;
 namespace MasterclassQuiz.Api.Live;
 
 /// <summary>
-/// The live meeting, at <see cref="Path"/>. Each Masterclass has one group (<see cref="MasterclassGroup"/>)
-/// that its broadcasts go to. Like the REST endpoints, the hub is a thin caller of the Quiz engine.
+/// A live Masterclass's SignalR transport, at <see cref="Path"/>. The hub translates SignalR calls into calls
+/// on the live Masterclass module (<see cref="LiveMasterclass"/>), which makes every change and sends its
+/// broadcasts; reads that change nothing go straight to the Quiz engine. The hub owns only Host
+/// authorisation, the participant cookie, adding connections to the Masterclass's group
+/// (<see cref="MasterclassGroup"/>) and shaping replies. The message names below are the wire contract;
+/// <see cref="SignalRBroadcasts"/> sends them to the group.
 /// </summary>
-public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions, SessionRunner runner) : Hub
+public sealed partial class QuizHub(QuizEngine engine, LiveMasterclass live) : Hub
 {
     public const string Path = "/hubs/quiz";
 
@@ -42,6 +46,9 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
     /// <c>ended</c> true) when the Session ends.
     /// </summary>
     public const string LeaderboardUpdated = nameof(LeaderboardUpdated);
+
+    /// <summary>Server → clients: <c>{ masterclassId }</c> once the Host has closed the Masterclass.</summary>
+    public const string MasterclassClosed = nameof(MasterclassClosed);
 
     public static string MasterclassGroup(int masterclassId) => $"masterclass-{masterclassId}";
 
@@ -83,16 +90,8 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
     /// Masterclass as <see cref="QuestionStarted"/>. Replies with every reason it was refused (empty: started).
     /// </summary>
     [Authorize]
-    public async Task<SessionStartReply> StartSession(int masterclassId, int workshopId, DifficultyCounts mix)
-    {
-        var result = await engine.StartSessionAsync(masterclassId, workshopId, mix, Context.ConnectionAborted);
-        if (result.Session is { } session)
-        {
-            await sessions.QuestionStartedAsync(session.FirstQuestion);
-            runner.Follow(session.Id);
-        }
-        return new SessionStartReply(result.Problems);
-    }
+    public async Task<SessionStartReply> StartSession(int masterclassId, int workshopId, DifficultyCounts mix) =>
+        new(await live.StartSessionAsync(masterclassId, workshopId, mix, Context.ConnectionAborted));
 
     /// <summary>
     /// A Participant's phone (known by the participant cookie): answer a running Question with the option at
@@ -105,16 +104,7 @@ public sealed partial class QuizHub(QuizEngine engine, SessionNotifier sessions,
         {
             return new AnswerReply(AnswerResult.UnknownParticipant);
         }
-        var submitted = await engine.SubmitAnswerAsync(token, questionId, option, Context.ConnectionAborted);
-        if (submitted is { Result: AnswerResult.Accepted, Count: { } count })
-        {
-            await sessions.AnswerCountUpdatedAsync(count);
-            if (count.EveryoneAnswered)
-            {
-                runner.Wake(count.SessionId);
-            }
-        }
-        return new AnswerReply(submitted.Result);
+        return new AnswerReply(await live.SubmitAnswerAsync(token, questionId, option, Context.ConnectionAborted));
     }
 
     // The caller's participant cookie (set when they joined); null without one.
@@ -126,40 +116,4 @@ public sealed record SessionStartReply(IReadOnlyList<string> Problems);
 
 public sealed record AnswerReply(AnswerResult Result);
 
-/// <summary>Live updates sent from outside the hub, e.g. after a Participant joins over REST.</summary>
-public sealed class ParticipantNotifier(IHubContext<QuizHub> hub, QuizEngine engine)
-{
-    public async Task ParticipantJoinedAsync(int masterclassId, CancellationToken cancellationToken = default)
-    {
-        var masterclass = await engine.GetMasterclassAsync(masterclassId, cancellationToken);
-        if (masterclass is null)
-        {
-            return;
-        }
-        await hub.Clients.Group(QuizHub.MasterclassGroup(masterclassId)).SendAsync(
-            QuizHub.ParticipantCountUpdated,
-            new ParticipantCount(masterclassId, masterclass.Participants),
-            cancellationToken);
-    }
-}
-
 public sealed record ParticipantCount(int MasterclassId, int Participants);
-
-/// <summary>Session broadcasts to a Masterclass's group, from the hub or from outside it (e.g. timers).</summary>
-public sealed class SessionNotifier(IHubContext<QuizHub> hub)
-{
-    public Task QuestionStartedAsync(QuestionStarted question, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(QuizHub.MasterclassGroup(question.MasterclassId)).SendAsync(QuizHub.QuestionStarted, question, cancellationToken);
-
-    public Task AnswerCountUpdatedAsync(AnswerCount count, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(QuizHub.MasterclassGroup(count.MasterclassId)).SendAsync(QuizHub.AnswerCountUpdated, count, cancellationToken);
-
-    public Task QuestionRevealedAsync(QuestionRevealed revealed, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(QuizHub.MasterclassGroup(revealed.MasterclassId)).SendAsync(QuizHub.QuestionRevealed, revealed, cancellationToken);
-
-    public Task SessionEndedAsync(SessionEnded ended, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(QuizHub.MasterclassGroup(ended.MasterclassId)).SendAsync(QuizHub.SessionEnded, ended, cancellationToken);
-
-    public Task LeaderboardUpdatedAsync(SessionLeaderboard leaderboard, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(QuizHub.MasterclassGroup(leaderboard.MasterclassId)).SendAsync(QuizHub.LeaderboardUpdated, leaderboard, cancellationToken);
-}

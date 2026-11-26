@@ -1,14 +1,12 @@
-using MasterclassQuiz.Api.Quiz;
-
 namespace MasterclassQuiz.Api.Live;
 
 /// <summary>
-/// Restart recovery: on startup, the backend timer follows every Session that hasn't ended, so a Question
-/// whose deadline passed while the backend was down is revealed (with Timed out outcomes) and the Session
-/// carries on. Retries until the database answers. Configuration <see cref="EnabledKey"/> (default true)
+/// Restart recovery: on startup, asks the live Masterclass module to resume every Session that hasn't ended,
+/// so a Question whose deadline passed while the backend was down is revealed (with Timed out outcomes) and
+/// the Session carries on. Retries until the database answers. Configuration <see cref="EnabledKey"/> (default true)
 /// turns it off, e.g. for tests that share one database.
 /// </summary>
-public sealed class SessionRecovery(QuizEngine engine, SessionRunner runner, ILogger<SessionRecovery> logger) : BackgroundService
+public sealed class SessionRecovery(LiveMasterclass live, ILogger<SessionRecovery> logger) : BackgroundService
 {
     public const string EnabledKey = "Live:ResumeSessionsOnStartup";
 
@@ -20,11 +18,7 @@ public sealed class SessionRecovery(QuizEngine engine, SessionRunner runner, ILo
         {
             try
             {
-                var sessions = await engine.ListRunningSessionsAsync(cancellationToken: stoppingToken);
-                foreach (var sessionId in sessions)
-                {
-                    runner.Follow(sessionId);
-                }
+                var sessions = await live.ResumeAllSessionsAsync(stoppingToken);
                 if (sessions.Count > 0)
                 {
                     logger.LogInformation("Resumed {Count} running Session(s): {SessionIds}", sessions.Count, sessions);
