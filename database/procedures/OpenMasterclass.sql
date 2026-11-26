@@ -16,8 +16,12 @@ BEGIN
 
     BEGIN TRANSACTION;
 
-    -- One opening at a time, so two Drafts can't both see that nothing is Open and both open.
-    EXEC sp_getapplock @Resource = N'dbo.Masterclasses.Open', @LockMode = N'Exclusive', @LockOwner = N'Transaction';
+    -- One opening at a time, so two Drafts can't both see that nothing is Open and both open (the
+    -- unique index UQ_Masterclasses_OneOpen backs this up: a second Open row fails instead of slipping in).
+    DECLARE @Lock int;
+    EXEC @Lock = sp_getapplock @Resource = N'dbo.Masterclasses.Open', @LockMode = N'Exclusive', @LockOwner = N'Transaction';
+    IF @Lock < 0
+        THROW 50001, N'The lock for opening a Masterclass was not granted, so nothing was opened.', 1;
 
     DECLARE @Status tinyint = (
         SELECT Status FROM dbo.Masterclasses WITH (UPDLOCK, HOLDLOCK) WHERE Id = @MasterclassId);

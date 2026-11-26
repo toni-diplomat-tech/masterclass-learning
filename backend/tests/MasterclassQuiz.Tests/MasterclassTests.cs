@@ -88,19 +88,33 @@ public sealed class MasterclassTests(SqlServerFixture sqlServer)
     }
 
     [Fact]
-    public async Task Two_drafts_opening_at_the_same_moment_can_not_both_open()
+    public async Task Drafts_opening_at_the_same_moment_can_not_both_open()
     {
-        var first = await CreateMasterclassAsync("Dev team 2026");
-        var second = await CreateMasterclassAsync("QA team 2026");
-        await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection);
+        // Two openings seldom interleave, so several rounds of many Hosts each, released together.
+        const int Rounds = 5, Hosts = 12;
+        var course = await ImportCourseAsync();
+        for (var round = 0; round < Rounds; round++)
+        {
+            var drafts = new List<MasterclassOverview>();
+            for (var i = 0; i < Hosts; i++)
+            {
+                drafts.Add((await _engine.CreateMasterclassAsync(course.CourseId, $"Team {i}")).Masterclass!);
+            }
+            await OnlyOpenMasterclass.CloseOpenMasterclassesAsync(sqlServer.Connection);
 
-        var results = await Task.WhenAll(
-            new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now)).OpenMasterclassAsync(first.Id),
-            new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now)).OpenMasterclassAsync(second.Id));
+            var go = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var openings = drafts.Select(draft => Task.Run(async () =>
+            {
+                await go.Task;
+                return await new QuizEngine(sqlServer.Connection, new FakeTimeProvider(Now)).OpenMasterclassAsync(draft.Id);
+            })).ToList();
+            go.SetResult();
+            var results = await Task.WhenAll(openings);
 
-        Assert.Single(results, result => result.Succeeded);
-        var refused = Assert.Single(results, result => !result.Succeeded);
-        Assert.Equal(MasterclassStatus.Draft, refused.Masterclass!.Status);
+            Assert.Single(results, result => result.Succeeded);
+            Assert.All(results.Where(result => !result.Succeeded), refused => Assert.Equal(MasterclassStatus.Draft, refused.Masterclass!.Status));
+            Assert.Single(await _engine.ListMasterclassesAsync(), masterclass => masterclass.Status == MasterclassStatus.Open);
+        }
     }
 
     [Fact]
